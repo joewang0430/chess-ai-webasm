@@ -151,11 +151,11 @@ export default function TestPage() {
       {/* 状态栏 */}
       <div className="mt-6 flex flex-col items-center gap-2">
         <div className="h-6 font-bold text-blue-600">
-          {isSearching ? 'AI 正在思考...' : game.isGameOver() ? '游戏结束' : '轮到你了'}
+          {isSearching ? 'AI is thinking...' : game.isGameOver() ? 'Game Over' : 'Your Turn'}
         </div>
         <div className="flex gap-4">
-          <button onClick={() => { setGame(new Chess()); resetGame(); }} className="px-4 py-2 bg-blue-500 text-white rounded">新游戏</button>
-          <button onClick={() => { game.undo(); game.undo(); setGame(new Chess(game.fen())); }} className="px-4 py-2 bg-gray-500 text-white rounded">悔棋</button>
+          <button onClick={() => { setGame(new Chess()); resetGame(); }} className="px-4 py-2 bg-blue-500 text-white rounded">New Game</button>
+          <button onClick={() => { game.undo(); game.undo(); setGame(new Chess(game.fen())); }} className="px-4 py-2 bg-gray-500 text-white rounded">Undo</button>
         </div>
       </div>
     </div>
