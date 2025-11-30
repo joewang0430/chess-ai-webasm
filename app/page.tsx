@@ -7,30 +7,28 @@ function App() {
   const [logs, setLogs] = useState<string[]>([]);
 
   useEffect(() => {
-    // 1. 指向你截图里的那个具体文件
-    // 注意：public 目录在浏览器中对应根路径，所以是 /engine/...
+    // 主线程加载
     const worker = new Worker('/engine/stockfish-17.1-8e4d048.js');
     workerRef.current = worker;
 
     worker.onmessage = (event) => {
       const message = event.data;
       console.log('Stockfish:', message);
-      setLogs((prev) => [...prev.slice(-10), message]); // 只保留最后10行日志
+      setLogs((prev) => [...prev.slice(-10), message]);
     };
 
-    // 2. 启动引擎
+    // 1. 启动
     worker.postMessage('uci');
 
-    // 3. (可选) 如果你下载了 nnue 文件，取消下面注释并填入文件名
-    // setTimeout(() => {
-    //    worker.postMessage('setoption name EvalFile value /engine/你的文件名.nnue');
-    //    worker.postMessage('setoption name Use NNUE value true');
-    // }, 500);
-
-    // 4. 测试计算
+    // 2. 开启内置 NNUE (不需要外部文件)
     setTimeout(() => {
-      console.log('发送计算指令...');
+      console.log('开启内置 NNUE...');
+      worker.postMessage('setoption name Use NNUE value true');
       worker.postMessage('isready');
+    }, 500);
+
+    // 3. 跑一下看看
+    setTimeout(() => {
       worker.postMessage('position startpos');
       worker.postMessage('go depth 15');
     }, 1000);
@@ -42,9 +40,9 @@ function App() {
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Stockfish 17.1 本地运行测试</h1>
+      <h1>Stockfish 17.1 (最终修复版)</h1>
       <div style={{ background: '#f0f0f0', padding: 10, borderRadius: 5, fontFamily: 'monospace' }}>
-        <h3>引擎日志 (看这里动没动):</h3>
+        <h3>引擎日志:</h3>
         {logs.map((log, i) => (
           <div key={i} style={{ borderBottom: '1px solid #ddd' }}>{log}</div>
         ))}
@@ -55,68 +53,60 @@ function App() {
 
 export default App;
 
-// import Image from "next/image";
 
-// export default function Home() {
+// 'use client';
+
+// import React, { useEffect, useRef, useState } from 'react';
+
+// function App() {
+//   const workerRef = useRef<Worker | null>(null);
+//   const [logs, setLogs] = useState<string[]>([]);
+
+//   useEffect(() => {
+//     // 1. 指向你截图里的那个具体文件
+//     // 注意：public 目录在浏览器中对应根路径，所以是 /engine/...
+//     const worker = new Worker('/engine/stockfish-17.1-8e4d048.js');
+//     workerRef.current = worker;
+
+//     worker.onmessage = (event) => {
+//       const message = event.data;
+//       console.log('Stockfish:', message);
+//       setLogs((prev) => [...prev.slice(-10), message]); // 只保留最后10行日志
+//     };
+
+//     // 2. 启动引擎
+//     worker.postMessage('uci');
+
+//     // setTimeout(() => {
+//     //   console.log('正在加载 NNUE...');
+//     //   worker.postMessage('setoption name EvalFile value /engine/nn-46832cfbead3.nnue');
+//     //   worker.postMessage('setoption name Use NNUE value true');
+//     // }, 500);
+
+//     // 4. 测试计算
+//     setTimeout(() => {
+//       console.log('发送计算指令...');
+//       worker.postMessage('isready');
+//       worker.postMessage('position startpos');
+//       worker.postMessage('go depth 15');
+//     }, 1000);
+
+//     return () => {
+//       worker.terminate();
+//     };
+//   }, []);
+
 //   return (
-//     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-//       <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-//         <Image
-//           className="dark:invert"
-//           src="/next.svg"
-//           alt="Next.js logo"
-//           width={100}
-//           height={20}
-//           priority
-//         />
-//         <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-//           <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-//             To get started, edit the page.tsx file.
-//           </h1>
-//           <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-//             Looking for a starting point or more instructions? Head over to{" "}
-//             <a
-//               href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-//               className="font-medium text-zinc-950 dark:text-zinc-50"
-//             >
-//               Templates
-//             </a>{" "}
-//             or the{" "}
-//             <a
-//               href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-//               className="font-medium text-zinc-950 dark:text-zinc-50"
-//             >
-//               Learning
-//             </a>{" "}
-//             center.
-//           </p>
-//         </div>
-//         <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-//           <a
-//             className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-//             href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-//             target="_blank"
-//             rel="noopener noreferrer"
-//           >
-//             <Image
-//               className="dark:invert"
-//               src="/vercel.svg"
-//               alt="Vercel logomark"
-//               width={16}
-//               height={16}
-//             />
-//             Deploy Now
-//           </a>
-//           <a
-//             className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-//             href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-//             target="_blank"
-//             rel="noopener noreferrer"
-//           >
-//             Documentation
-//           </a>
-//         </div>
-//       </main>
+//     <div style={{ padding: 20 }}>
+//       <h1>Stockfish 17.1 本地运行测试</h1>
+//       <div style={{ background: '#f0f0f0', padding: 10, borderRadius: 5, fontFamily: 'monospace' }}>
+//         <h3>引擎日志 (看这里动没动):</h3>
+//         {logs.map((log, i) => (
+//           <div key={i} style={{ borderBottom: '1px solid #ddd' }}>{log}</div>
+//         ))}
+//       </div>
 //     </div>
 //   );
 // }
+
+// export default App;
