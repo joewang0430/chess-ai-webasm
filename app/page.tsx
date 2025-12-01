@@ -22,7 +22,7 @@ function App() {
 
     // 2. 开启内置 NNUE (不需要外部文件)
     setTimeout(() => {
-      console.log('开启内置 NNUE...');
+      console.log('start bulid-in NNUE...');
       worker.postMessage('setoption name Use NNUE value true');
       worker.postMessage('isready');
     }, 500);
@@ -40,9 +40,9 @@ function App() {
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Stockfish 17.1 (最终修复版)</h1>
+      <h1>Stockfish 17.1 (final fixed version)</h1>
       <div style={{ background: '#f0f0f0', padding: 10, borderRadius: 5, fontFamily: 'monospace' }}>
-        <h3>引擎日志:</h3>
+        <h3>Engine log:</h3>
         {logs.map((log, i) => (
           <div key={i} style={{ borderBottom: '1px solid #ddd' }}>{log}</div>
         ))}

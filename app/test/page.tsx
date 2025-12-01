@@ -17,7 +17,7 @@ export default function TestPage() {
   
   // 引入 AI
   const { bestMove, isSearching, evaluatePosition, resetGame } = useStockfish({
-    depth: 24,
+    depth: 25,
     skillLevel: 20,
   });
 
