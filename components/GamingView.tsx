@@ -4,7 +4,7 @@ import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
 import { useGame } from '@/context/GameContext';
 import { useStockfish } from '@/hooks/useStockfish';
-import { PieceColor, PlayerType, MIN_DEPTH, MAX_DEPTH, MoveRecord, ANALYSIS_DEPTH, AI_MIN_MOVE_TIME } from '@/types/game';
+import { PieceColor, PlayerType, MIN_DEPTH, MAX_DEPTH, MoveRecord, ANALYSIS_DEPTH, AI_MIN_MOVE_TIME, ANALYSIS_MULTI_PV } from '@/types/game';
 import ChessBoard from './ChessBoard';
 
 // ============================================
@@ -154,6 +154,9 @@ function AnalysisPanel() {
     return null;
   }
 
+  // 固定行数，避免深度切换时因行数变化导致容器高度抖动
+  const rows = Array.from({ length: ANALYSIS_MULTI_PV }, (_, i) => analysis.topMoves[i]);
+
   return (
     <div className="bg-[#2a2a2a] rounded-lg p-4 space-y-2">
       <div className="flex items-center justify-between">
@@ -162,17 +165,23 @@ function AnalysisPanel() {
           <span className="text-yellow-500 text-sm animate-pulse">Analyzing...</span>
         )}
       </div>
-      
+
       <div className="space-y-1">
-        {analysis.topMoves.map((move, i) => (
-          <div key={i} className="flex items-center justify-between text-sm bg-[#3a3a3a] rounded px-2 py-1">
-            <span className="font-mono">{i + 1}. {move.move}</span>
+        {rows.map((move, i) => (
+          <div key={i} className="flex items-center justify-between text-sm bg-[#3a3a3a] rounded px-2 py-1 min-h-[32px]">
+            <span className="font-mono">
+              {i + 1}. {move ? move.move : '…'}
+            </span>
             <div className="flex items-center gap-3">
-              <span className={move.score >= 0 ? 'text-green-400' : 'text-red-400'}>
-                {move.mate ? `M${move.mate}` : `${(move.score / 100).toFixed(2)}`}
-              </span>
+              {move ? (
+                <span className={move.score >= 0 ? 'text-green-400' : 'text-red-400'}>
+                  {move.mate ? `M${move.mate}` : `${(move.score / 100).toFixed(2)}`}
+                </span>
+              ) : (
+                <span className="text-gray-500">—</span>
+              )}
               <span className="text-gray-400">
-                {move.winChance.toFixed(1)}%
+                {move ? `${move.winChance.toFixed(1)}%` : ''}
               </span>
             </div>
           </div>
