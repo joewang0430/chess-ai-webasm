@@ -222,6 +222,10 @@ export default function GamingView() {
     analysisMode: state.isAnalysisMode,
   });
 
+  // 右侧玩家面板位置：与棋盘齐平（根据是否翻转）
+  const topColor: PieceColor = state.settings.boardFlipped ? 'w' : 'b';
+  const bottomColor: PieceColor = state.settings.boardFlipped ? 'b' : 'w';
+
   // AI 走棋开始时间 (用于最小等待时间)
   const aiThinkStartRef = useRef<number>(0);
 
@@ -402,14 +406,18 @@ export default function GamingView() {
               {state.moveHistory.length === 0 ? (
                 <span className="text-gray-500">No moves yet</span>
               ) : (
-                state.moveHistory.map((move, i) => (
-                  <div key={i} className="flex gap-2">
-                    <span className="text-gray-500 w-6">{Math.floor(i / 2) + 1}.</span>
-                    <span className={move.color === 'w' ? 'text-white' : 'text-gray-400'}>
-                      {move.san}
-                    </span>
-                  </div>
-                ))
+                // 按回合分组：每两步为一回合（统一颜色显示）
+                Array.from({ length: Math.ceil(state.moveHistory.length / 2) }, (_, i) => {
+                  const whiteMove = state.moveHistory[i * 2];
+                  const blackMove = state.moveHistory[i * 2 + 1];
+                  return (
+                    <div key={i} className="flex gap-2">
+                      <span className="text-gray-500 w-6">{i + 1}.</span>
+                      <span className="text-white w-12">{whiteMove?.san || ''}</span>
+                      <span className="text-white w-12">{blackMove?.san || ''}</span>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
@@ -419,16 +427,30 @@ export default function GamingView() {
             <ChessBoard />
           </div>
 
-          {/* 右侧: 配置面板 */}
-          <div className="w-80 space-y-4">
-            {/* 黑方配置 */}
-            <PlayerPanel color="b" label="Black" isCurrentTurn={state.turn === 'b'} />
+          {/* 右侧: 配置面板（与棋盘上下齐平） */}
+          <div className="w-80 h-[500px] flex flex-col justify-between">
+            {/* 顶部：根据是否翻转决定谁在上 */}
+            <div>
+              <PlayerPanel 
+                color={topColor} 
+                label={topColor === 'b' ? 'Black' : 'White'} 
+                isCurrentTurn={state.turn === topColor} 
+              />
+            </div>
 
-            {/* 分析面板 */}
-            <AnalysisPanel />
+            {/* 中间：分析面板 */}
+            <div className="my-3">
+              <AnalysisPanel />
+            </div>
 
-            {/* 白方配置 */}
-            <PlayerPanel color="w" label="White" isCurrentTurn={state.turn === 'w'} />
+            {/* 底部：另一方 */}
+            <div>
+              <PlayerPanel 
+                color={bottomColor} 
+                label={bottomColor === 'b' ? 'Black' : 'White'} 
+                isCurrentTurn={state.turn === bottomColor} 
+              />
+            </div>
           </div>
         </div>
 
