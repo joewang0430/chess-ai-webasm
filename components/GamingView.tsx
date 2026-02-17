@@ -146,10 +146,11 @@ function PlayerPanel({ color, label, isCurrentTurn }: PlayerPanelProps) {
 // 分析面板
 // ============================================
 function AnalysisPanel() {
-  const { state } = useGame();
+  const { state, isCurrentPlayerAI } = useGame();
   const analysis = state.analysis;
 
-  if (!state.isAnalysisMode || !analysis) {
+  // AI 思考时不显示过时的分析结果
+  if (!state.isAnalysisMode || !analysis || isCurrentPlayerAI || state.isAIThinking) {
     return null;
   }
 
