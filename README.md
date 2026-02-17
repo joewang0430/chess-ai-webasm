@@ -1,67 +1,176 @@
-### Stockfish.js
+# Chess AI Platform
 
-<a href="https://github.com/nmrugg/stockfish.js">Stockfish.js</a> is a WASM implementation by Nathan Rugg of the <a href="https://github.com/official-stockfish/Stockfish">Stockfish</a> chess engine, for [Chess.com's](https://www.chess.com/analysis) in-browser engine.
+基于 Stockfish 17.1 WebAssembly 的纯前端国际象棋对弈与分析平台。
 
-Stockfish.js is currently updated to Stockfish 17.1.
+**部署地址**: https://chess.wangjue.me
 
-This edition of Stockfish.js comes in five flavors:
+---
 
- * The large multi-threaded engine:
-    * This is strongest version of the engine, but it is large (≈75MB) and will only run in browsers with the proper <a href=https://web.dev/articles/cross-origin-isolation-guide>CORS headers</a> applied. This engine is recommended if possible.
-    * Files: `stockfish-nnue-17.1-[0-9a-f].js` & `stockfish-nnue-17.1-[0-9a-f]-part-\d.wasm`
- * The large single-threaded engine:
-    * This is also large but will run in browsers without CORS headers; however it cannot use multiple threads via the UCI command `setoption name Threads`. This engine is recommended if CORS support is not possible.
-    * Files: `stockfish-nnue-17.1-single-[0-9a-f].js` & `stockfish-nnue-17.1-single-[0-9a-f]-part-\d.wasm`
- * The lite mult-threaded engine:
-    * This is the same as the first multi-threaded but much smaller (≈7MB) and quite a bit weaker. This engine is recommended for mobile browsers when CORS is available.
-    * Files: `stockfish-nnue-17.1-lite-[0-9a-f].js` & `stockfish-nnue-17.1-lite-[0-9a-f].wasm`
- * The lite single-threaded engine:
-    * Same as the first single-threaded engine but much smaller (≈7MB) and quite a bit weaker. This engine is recommended for mobile browsers that do not support CORS.
-    * Files: `stockfish-nnue-17.1-lite-single-[0-9a-f].js` & `stockfish-nnue-17.1-lite-single-[0-9a-f].wasm`
- * The ASM-JS engine:
-    * Compiled to JavaScript, not WASM. Compatible with every browser that runs JavaScript. Very slow and weak. Larger than the lite WASM engines (≈10MB). This engine should only be used as a last resort.
-    * File: `stockfish-17.1-asm-[0-9a-f].js`
+## 技术栈
 
-> [!IMPORTANT]
-> Due to the difficulty in handling and caching large files, the larger WASM files are split into parts. All parts are required to be in the same location and will be automatically assembled by the engine.
+- **框架**: Next.js 16 (App Router) + TypeScript
+- **引擎**: Stockfish 17.1 WASM (多线程版本，内置 NNUE)
+- **样式**: Tailwind CSS v4
+- **部署**: Vercel + Cloudflare DNS
 
-> [!Note]
-> Also, the file names may have a hash appended to them.
+---
 
-The ASM-JS engine will run in essentially any browser/runtime that supports JavaScript. The WASM Stockfish.js 17.1 will run on all modern browsers (e.g., Chrome/Edge/Firefox/Opera/Safari) on supported system (Windows 10+/macOS 11+/iOS 16+/Linux/Android), as well as supported versions of Node.js. For slightly older browsers, see the <a href=../../tree/Stockfish16>Stockfish.js 16 branch</a>. For an engine that supports chess variants (like 3-check and Crazyhouse), see the <a href=../../tree/Stockfish11>Stockfish.js 11 branch</a>.
+## 核心功能需求
 
-### API
+### 1. 页面结构
 
-In the browser, it is recommended to use the engine via Web Workers. See `examples/loadEngine.js` for a sample implementation.
+采用**单页应用**设计，通过内部状态切换显示：
+- **Setup 模式**: 游戏配置界面
+- **Gaming 模式**: 对弈界面
+- **Analysis 模式**: 分析功能（在 Gaming 模式下开启）
 
-Stockfish.js can be found in the npm repository and installed like this: `npm install stockfish`.
+### 2. 双方配置
 
-If you want to use it from the command line, you may want to simply install it globally: `npm install -g stockfish`. Then you can simply run `stockfishjs`.
+| 配置项 | 说明 |
+|--------|------|
+| 身份 | 每方可独立选择 `Player` 或 `Stockfish` |
+| AI 深度 | 范围 1-25，双方各自独立配置 |
+| Skill Level | 锁定为 20（最强） |
+| 时间 | Setup 时统一设置初始时间，Gaming 中可独立编辑 |
 
-In Node.js, you can either run it directly from the command line (i.e., `node src/stockfish.js`) or require() it as a module (i.e., `var stockfish = require("stockfish");`).
+**关键规则**:
+- 游戏中可随时切换任意一方的身份（Player ↔ AI）
+- 游戏中可随时调整 AI 深度，但当前正在思考的 AI 使用旧深度，下一步才用新深度
+- 双方都可以设为 Stockfish 且 Depth 可以不同
 
-### Compiling
+### 3. Analysis 模式
 
-You need to have <a href="http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html">emscripten `3.1.7`</a> installed and in your path. Then you can compile Stockfish.js with the build script: `./build.js`. See `./build.js --help` for details. To build all flavors, run `./build.js --all`.
+| 特性 | 说明 |
+|------|------|
+| 触发条件 | **仅当轮到 Player 时才分析**；AI 轮次不分析 |
+| 双 AI 时 | Analysis Mode 按钮 disabled，hover 提示 "需要 Player 参与" |
+| 输出内容 | Top 5 最佳走法 + 胜率百分比（WDL） |
+| 切换中断 | 若 Player 切换为 AI，立即中断分析，清除分析 UI |
+| Undo 锁定 | Analysis 模式下禁用 Undo，点击时提示 "先退出分析模式" |
 
-### Examples
+**技术实现**:
+- 使用 `setoption name MultiPV value 5` 一次性获取前 5 个变着
+- 使用 `setoption name UCI_ShowWDL value true` 获取胜率数据
+- WDL 是千分比，除以 10 即为百分比
 
-There are examples in the examples folder. You will need to run the examples/server.js server to view the client-side examples. Then you can test out a simple interface at http://localhost:9091/ or a more complete demo at http://localhost:9091/demo.html.
+### 4. Customize Board（自定义棋盘）
 
-There are also examples of how to use Stockfish.js via Node.js.
+| 特性 | 说明 |
+|------|------|
+| 入口 | Setup 和 Gaming 模式下均可进入 |
+| 初始状态 | 首次进入为标准初始棋盘；之后保留上次自定义结果 |
+| 限制条件 | 双方各必须有且仅有 1 个国王 |
+| 先手选择 | 自定义时可指定 White/Black 先走 |
+| 重置 | "Reset to classic board" 按钮恢复标准棋盘 |
+| 持久化 | 自定义棋盘配置保存到 localStorage |
 
-### Thanks
+### 5. Time Control（时间控制）
 
-- <a href="https://github.com/official-stockfish/Stockfish">The Stockfish team</a>
-- <a href="https://github.com/exoticorn/stockfish-js">exoticorn</a>
-- <a href="https://github.com/ddugovic/Stockfish">ddugovic</a>
-- <a href="https://github.com/niklasf/">niklasf</a> <a href="https://github.com/niklasf/stockfish.js">stockfish.js</a> & <a href="https://github.com/niklasf/stockfish.wasm">stockfish.wasm</a>
-- <a href="https://github.com/hi-ogawa/Stockfish">hi-ogawa</a>
-- <a href="https://github.com/linrock">linrock</a>
+| 特性 | 说明 |
+|------|------|
+| 类型 | 总时间制（用完判负） |
+| 加时 | 暂不实现 increment |
+| 初始值 | Setup 时统一设置 |
+| 编辑 | Gaming 中可独立编辑双方剩余时间 |
+| AI 时间 | AI 思考需要消耗计时器时间（具体逻辑待议） |
 
-See <a href="https://raw.githubusercontent.com/nmrugg/stockfish.js/master/AUTHORS">AUTHORS</a> for more credits.
+### 6. Undo（悔棋）
 
-### License
+| 场景 | Undo 步数 |
+|------|-----------|
+| Player vs AI，AI 刚走完 | 2 步（AI 的 + Player 的） |
+| Player vs AI，Player 刚走完 | 1 步 |
+| Player vs Player | 1 步 |
+| AI vs AI | 2 步 |
 
-(c) 2025, Chess.com, LLC
-GPLv3 (see <a href="https://raw.githubusercontent.com/nmrugg/stockfish.js/master/Copying.txt">Copying.txt</a>)
+**规则**: Undo 逻辑只看当前双方身份，不看历史走棋是谁下的。
+
+### 7. 游戏结束
+
+| 触发条件 | 说明 |
+|----------|------|
+| 将死 | 自动判断 |
+| 逼和 | 自动判断 |
+| 三次重复 | 自动判断 |
+| 50 步规则 | 自动判断 |
+| 时间耗尽 | 判负 |
+
+结算 UI 待议。
+
+### 8. 其他功能
+
+- **Flip Board**: 翻转棋盘视角
+- **Show Legal Moves**: 显示/隐藏合法走法提示
+- **Theme**: 棋盘配色切换
+- **Move History**: 走棋历史记录
+
+---
+
+## 技术约束
+
+### CORS Headers（必须）
+
+多线程 WASM 需要以下响应头（已在 `next.config.ts` 配置）：
+```
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+### Stockfish 配置
+
+| 参数 | 值 |
+|------|-----|
+| Skill Level | 固定 20 |
+| Depth | 用户可调 1-25 |
+| NNUE | 启用内置版本 |
+| MultiPV | 分析模式下设为 5 |
+| UCI_ShowWDL | 分析模式下启用 |
+
+---
+
+## 项目结构
+
+```
+chess-ai-webasm/
+├── app/                    # Next.js App Router
+│   ├── page.tsx            # 主页面（单页应用）
+│   └── layout.tsx          # 根布局
+├── components/             # UI 组件
+├── hooks/
+│   └── useStockfish.ts     # Stockfish 通信 Hook
+├── context/
+│   └── GameContext.tsx     # 全局状态管理（待创建）
+├── types/
+│   └── game.ts             # TypeScript 类型定义（待创建）
+├── public/engine/          # Stockfish WASM 文件
+│   ├── stockfish-17.1-8e4d048.js
+│   ├── stockfish-worker.js
+│   └── stockfish-17.1-8e4d048-part-[0-5].wasm
+└── next.config.ts          # CORS 配置
+```
+
+---
+
+## 不做的事情
+
+- ❌ 用户登录/注册
+- ❌ 后端服务
+- ❌ 时间加时（increment）
+- ❌ 游戏进度刷新后恢复（仅保存自定义棋盘配置）
+- ❌ 棋子拖拽（当前使用点击移动）
+
+---
+
+## 开发备忘
+
+### 已知问题
+
+- `react-chessboard` 与 React 19 不兼容，当前使用自绘 Emoji 棋盘
+- 棋子 UI 后续可升级为 SVG 图片
+
+### 待议事项
+
+- AI 剩余时间少时的每步时间限制逻辑
+- 游戏结束弹窗 UI
+- Customize Board 的具体交互方式
+- 移动端适配

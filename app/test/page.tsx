@@ -16,9 +16,8 @@ export default function TestPage() {
   const [possibleMoves, setPossibleMoves] = useState<string[]>([]);
   
   // 引入 AI
-  const { bestMove, isSearching, evaluatePosition, resetGame } = useStockfish({
+  const { bestMove, isSearching, evaluatePosition, resetEngine } = useStockfish({
     depth: 25,
-    skillLevel: 20,
   });
 
   // 监听 AI 走棋
@@ -154,7 +153,7 @@ export default function TestPage() {
           {isSearching ? 'AI is thinking...' : game.isGameOver() ? 'Game Over' : 'Your Turn'}
         </div>
         <div className="flex gap-4">
-          <button onClick={() => { setGame(new Chess()); resetGame(); }} className="px-4 py-2 bg-blue-500 text-white rounded">New Game</button>
+          <button onClick={() => { setGame(new Chess()); resetEngine(); }} className="px-4 py-2 bg-blue-500 text-white rounded">New Game</button>
           <button onClick={() => { game.undo(); game.undo(); setGame(new Chess(game.fen())); }} className="px-4 py-2 bg-gray-500 text-white rounded">Undo</button>
         </div>
       </div>
