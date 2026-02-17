@@ -19,6 +19,8 @@ interface StockfishOptions {
 interface StockfishHook {
   /** AI 计算出的最佳走法 (UCI 格式, 如 "e2e4") */
   bestMove: string | null;
+  /** 最近一次 info multipv=1 的主变第一个走法 (PV1) */
+  pvBestMove: string | null;
   /** 是否正在思考 */
   isSearching: boolean;
   /** 分析数据 (仅分析模式下有效) */
@@ -119,6 +121,7 @@ export function useStockfish({
   
   // 状态
   const [bestMove, setBestMove] = useState<string | null>(null);
+  const [pvBestMove, setPvBestMove] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
@@ -131,6 +134,7 @@ export function useStockfish({
   
   // 临时存储分析结果 (每个深度的 Top N)
   const analysisBufferRef = useRef<Map<number, AnalysisMove>>(new Map());
+  const lastDepthRef = useRef<number>(0);
 
   // 同步 Refs
   useEffect(() => { depthRef.current = depth; }, [depth]);
@@ -172,21 +176,13 @@ export function useStockfish({
             lossChance: info.lossChance ?? 50,
             pv: info.pv ?? [],
           });
+          // 记录最新深度
+          if (info.depth) lastDepthRef.current = info.depth;
+        }
 
-          // 当收到所有 multipv 后，更新状态
-          if (info.multipv === multiPVRef.current || analysisBufferRef.current.size >= multiPVRef.current) {
-            const topMoves: AnalysisMove[] = [];
-            for (let i = 1; i <= multiPVRef.current; i++) {
-              const move = analysisBufferRef.current.get(i);
-              if (move) topMoves.push(move);
-            }
-            
-            setAnalysisData({
-              depth: info.depth ?? 0,
-              topMoves,
-              isAnalyzing: true,
-            });
-          }
+        // 记录 multipv=1 的主变首着，供 AI 一致性参考
+        if (info.multipv === 1 && info.move) {
+          setPvBestMove(info.move);
         }
       }
 
@@ -200,7 +196,13 @@ export function useStockfish({
         
         // 分析完成
         if (analysisModeRef.current) {
-          setAnalysisData(prev => prev ? { ...prev, isAnalyzing: false } : null);
+          // 在 bestmove 到来时发布最终的 TopN（使用收集的 buffer）
+          const topMoves: AnalysisMove[] = [];
+          for (let i = 1; i <= multiPVRef.current; i++) {
+            const m = analysisBufferRef.current.get(i);
+            if (m) topMoves.push(m);
+          }
+          setAnalysisData({ depth: lastDepthRef.current, topMoves, isAnalyzing: false });
         }
       }
     };
@@ -208,9 +210,14 @@ export function useStockfish({
     // 初始化 UCI
     worker.postMessage('uci');
     
-    // 配置引擎
+    // 配置引擎（去除 Skill Level，使用最大线程和合适的 Hash）
     setTimeout(() => {
-      worker.postMessage('setoption name Skill Level value 20'); // 固定最强
+      const threads = (typeof navigator !== 'undefined' && (navigator as any).hardwareConcurrency) ? (navigator as any).hardwareConcurrency : 1;
+      // 多线程 & Hash 提升稳定性与强度
+      worker.postMessage(`setoption name Threads value ${threads}`);
+      worker.postMessage('setoption name Hash value 256');
+      // 保持最强模式，不限制 Elo
+      worker.postMessage('setoption name UCI_LimitStrength value false');
       worker.postMessage('setoption name Use NNUE value true');
       worker.postMessage('setoption name UCI_ShowWDL value true'); // 开启胜率
       worker.postMessage('isready');
@@ -231,6 +238,7 @@ export function useStockfish({
 
     // 清除之前的结果
     setBestMove(null);
+    setPvBestMove(null);
     analysisBufferRef.current.clear();
     setIsSearching(true);
 
@@ -238,9 +246,16 @@ export function useStockfish({
       setAnalysisData({ depth: 0, topMoves: [], isAnalyzing: true });
     }
 
-    // 设置 MultiPV
+    // 确保停止旧搜索
+    workerRef.current.postMessage('stop');
+
+    // 设置一致的选项以保证 AI 与分析一致
     const pvCount = analysisModeRef.current ? multiPVRef.current : 1;
     workerRef.current.postMessage(`setoption name MultiPV value ${pvCount}`);
+    // 根据是否在分析模式下设置 AnalyseMode，避免影响常规 bestmove 搜索
+    workerRef.current.postMessage(`setoption name UCI_AnalyseMode value ${analysisModeRef.current ? 'true' : 'false'}`);
+    workerRef.current.postMessage('setoption name Contempt value 0');
+    workerRef.current.postMessage('setoption name Ponder value false');
 
     // 设置局面
     workerRef.current.postMessage(`position fen ${fen}`);
@@ -287,6 +302,7 @@ export function useStockfish({
 
   return {
     bestMove,
+    pvBestMove,
     isSearching,
     analysisData,
     isReady,

@@ -210,6 +210,7 @@ export default function GamingView() {
   // Stockfish Hook
   const { 
     bestMove, 
+    pvBestMove,
     isSearching, 
     analysisData,
     isReady,
@@ -238,6 +239,14 @@ export default function GamingView() {
     }
   }, [analysisData, state.isAnalysisMode, setAnalysisData]);
 
+  // 在走棋方切换时，立即停止旧的分析并清空数据，避免滞后显示
+  useEffect(() => {
+    if (state.isAnalysisMode) {
+      stopSearch();
+      setAnalysisData(null);
+    }
+  }, [state.turn]);
+
   // ============================================
   // AI 走棋逻辑
   // ============================================
@@ -263,7 +272,8 @@ export default function GamingView() {
   // 处理 AI 返回的走法
   // ============================================
   useEffect(() => {
-    if (!bestMove || !isCurrentPlayerAI) return;
+    const chosen = bestMove;
+    if (!chosen || !isCurrentPlayerAI) return;
 
     // 计算已经等待的时间
     const elapsed = Date.now() - aiThinkStartRef.current;
@@ -273,16 +283,16 @@ export default function GamingView() {
     const executeMove = () => {
       try {
         const chess = new Chess(state.fen);
-        const from = bestMove.substring(0, 2);
-        const to = bestMove.substring(2, 4);
-        const promotion = bestMove.length > 4 ? bestMove[4] : undefined;
+        const from = chosen.substring(0, 2);
+        const to = chosen.substring(2, 4);
+        const promotion = chosen.length > 4 ? chosen[4] : undefined;
 
         const result = chess.move({ from, to, promotion });
         
         if (result) {
           const moveRecord: MoveRecord = {
             san: result.san,
-            uci: bestMove,
+            uci: chosen,
             color: state.turn,
             fenBefore: state.fen,
             fenAfter: chess.fen(),
@@ -314,12 +324,20 @@ export default function GamingView() {
   // ============================================
   useEffect(() => {
     if (state.isAnalysisMode && !isCurrentPlayerAI && isReady) {
+      // 先停止任何旧的搜索并清空旧分析，避免滞后
+      stopSearch();
+      setAnalysisData(null);
       // 分析模式使用最大深度 25
       setDepth(ANALYSIS_DEPTH);
       setAnalysisMode(true);
       evaluatePosition(state.fen);
     } else {
+      // 非分析模式：不要中断 AI 的搜索，仅清理分析 UI 状态
+      if (!isCurrentPlayerAI) {
+        stopSearch();
+      }
       setAnalysisMode(false);
+      setAnalysisData(null);
     }
   }, [state.isAnalysisMode, state.fen, isCurrentPlayerAI, isReady]);
 
