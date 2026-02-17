@@ -253,6 +253,8 @@ export default function GamingView() {
     if (state.isAnalysisMode) {
       stopSearch();
       setAnalysisData(null);
+      // 分析模式下不涉及对弈，确保不被 AI 思考标记隐藏面板
+      setAIThinking(false);
     }
   }, [state.turn]);
 
@@ -336,6 +338,8 @@ export default function GamingView() {
       // 先停止任何旧的搜索并清空旧分析，避免滞后
       stopSearch();
       setAnalysisData(null);
+      // 进入分析模式时清理 AI 思考标记，避免面板因 isAIThinking 被隐藏
+      setAIThinking(false);
       // 分析模式使用最大深度 25
       setDepth(ANALYSIS_DEPTH);
       setAnalysisMode(true);
@@ -344,6 +348,8 @@ export default function GamingView() {
       // 非分析模式：不要中断 AI 的搜索，仅清理分析 UI 状态
       if (!isCurrentPlayerAI) {
         stopSearch();
+        // 非 AI 回合时确保关闭 AI 思考标记
+        setAIThinking(false);
       }
       setAnalysisMode(false);
       setAnalysisData(null);
