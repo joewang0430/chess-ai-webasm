@@ -165,8 +165,14 @@ export function useStockfish({
       // --- 解析 info 行 ---
       const info = parseInfoLine(msg);
       if (info && info.move) {
-        // 分析模式: 收集 Top N 走法
+        // 分析模式: 流式收集并发布 Top N 走法
         if (analysisModeRef.current && info.multipv) {
+          const currentDepth = info.depth ?? lastDepthRef.current;
+          // 深度提升时清空旧缓冲，避免不同深度混杂
+          if (info.depth && info.depth > lastDepthRef.current) {
+            analysisBufferRef.current.clear();
+          }
+          // 保存该 multipv 的当前行
           analysisBufferRef.current.set(info.multipv, {
             move: info.move,
             score: info.score ?? 0,
@@ -176,11 +182,19 @@ export function useStockfish({
             lossChance: info.lossChance ?? 50,
             pv: info.pv ?? [],
           });
-          // 记录最新深度
-          if (info.depth) lastDepthRef.current = info.depth;
+          // 更新最新深度
+          lastDepthRef.current = currentDepth;
+
+          // 组装当前可用的 TopN 并实时发布，isAnalyzing=true
+          const topMoves: AnalysisMove[] = [];
+          for (let i = 1; i <= multiPVRef.current; i++) {
+            const m = analysisBufferRef.current.get(i);
+            if (m) topMoves.push(m);
+          }
+          setAnalysisData({ depth: lastDepthRef.current, topMoves, isAnalyzing: true });
         }
 
-        // 记录 multipv=1 的主变首着，供 AI 一致性参考
+        // 记录 multipv=1 的主变首着，供 AI 一致性参考（仅非分析场景下会使用）
         if (info.multipv === 1 && info.move) {
           setPvBestMove(info.move);
         }
@@ -194,7 +208,7 @@ export function useStockfish({
         }
         setIsSearching(false);
         
-        // 分析完成
+        // 分析完成：发布最终 TopN（isAnalyzing=false）
         if (analysisModeRef.current) {
           // 在 bestmove 到来时发布最终的 TopN（使用收集的 buffer）
           const topMoves: AnalysisMove[] = [];
