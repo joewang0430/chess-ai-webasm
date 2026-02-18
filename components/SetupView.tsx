@@ -110,10 +110,12 @@ export default function SetupView() {
           Setup Page {state.isCustomizing && '-- customized'}
         </h1>
 
-        {/* 主布局 */}
-        <div className="flex gap-6">
-          {/* 左侧: 走棋历史 */}
-          <div className="w-48 bg-[#2a2a2a] rounded-lg p-4">
+        {/* 主布局 - 使用 Grid 确保上下列对齐 */}
+        <div className="grid grid-cols-[192px_1fr_320px] gap-6">
+          {/* ========== Row 1: 主要内容 ========== */}
+          
+          {/* 左列: 走棋历史 */}
+          <div className="bg-[#2a2a2a] rounded-lg p-4">
             <h3 className="text-gray-400 mb-4">Move History</h3>
             <div className="text-sm text-gray-500">
               {state.moveHistory.length === 0 ? (
@@ -126,13 +128,13 @@ export default function SetupView() {
             </div>
           </div>
 
-          {/* 中间: 棋盘 */}
-          <div className="flex-1 flex justify-center">
+          {/* 中列: 棋盘 */}
+          <div className="flex justify-center">
             <ChessBoard />
           </div>
 
-          {/* 右侧: 配置面板 */}
-          <div className="w-80 space-y-4">
+          {/* 右列: 配置面板 */}
+          <div className="space-y-4">
             {/* 黑方配置 */}
             <PlayerPanel color="b" label="Black" />
 
@@ -186,13 +188,12 @@ export default function SetupView() {
             {/* 白方配置 */}
             <PlayerPanel color="w" label="White" />
           </div>
-        </div>
 
-        {/* 底部工具栏 */}
-        <div className="mt-6 flex items-center justify-between">
-          {/* 左侧: 主题选择 */}
-          <div className="flex items-center gap-2">
-            <span className="text-gray-400">Theme</span>
+          {/* ========== Row 2: 工具栏 ========== */}
+          
+          {/* 左列: Theme 选择器 */}
+          <div className="flex items-center justify-center gap-2 pt-4">
+            <span className="text-gray-400 text-sm">Theme</span>
             <div className="flex gap-1">
               {['green', 'blue', 'brown', 'purple', 'gray'].map((theme) => (
                 <button
@@ -213,54 +214,56 @@ export default function SetupView() {
             </div>
           </div>
 
-          {/* 中间: 功能按钮 */}
-          <div className="flex gap-2">
-            <button
-              onClick={toggleCustomizing}
-              className={`px-4 py-2 rounded border transition ${
-                state.isCustomizing 
-                  ? 'bg-yellow-500 text-black border-yellow-500' 
-                  : 'border-gray-600 hover:border-gray-400'
-              }`}
-            >
-              Customize Board
-            </button>
-            <button
-              onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { showLegalMoves: !state.settings.showLegalMoves } })}
-              className={`px-4 py-2 rounded border transition ${
-                state.settings.showLegalMoves 
-                  ? 'bg-yellow-500 text-black border-yellow-500' 
-                  : 'border-gray-600 hover:border-gray-400'
-              }`}
-            >
-              Show Legal Moves
-            </button>
-            <button
-              onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { boardFlipped: !state.settings.boardFlipped } })}
-              className="px-4 py-2 rounded border border-gray-600 hover:border-gray-400 transition"
-            >
-              Flip Board
-            </button>
+          {/* 中列: 棋盘操作按钮 */}
+          <div className="flex items-center justify-center pt-4">
+            <div className="w-[500px] flex items-center justify-between">
+              <button
+                onClick={toggleCustomizing}
+                className={`flex-1 px-2 py-2 rounded border transition whitespace-nowrap ${
+                  state.isCustomizing 
+                    ? 'bg-yellow-500 text-black border-yellow-500' 
+                    : 'border-gray-600 hover:border-gray-400'
+                }`}
+              >
+                Customize Board
+              </button>
+              <button
+                onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { showLegalMoves: !state.settings.showLegalMoves } })}
+                className={`flex-1 mx-2 px-2 py-2 rounded border transition whitespace-nowrap ${
+                  state.settings.showLegalMoves 
+                    ? 'bg-yellow-500 text-black border-yellow-500' 
+                    : 'border-gray-600 hover:border-gray-400'
+                }`}
+              >
+                Show Legal Moves
+              </button>
+              <button
+                onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { boardFlipped: !state.settings.boardFlipped } })}
+                className="flex-1 px-2 py-2 rounded border border-gray-600 hover:border-gray-400 transition whitespace-nowrap"
+              >
+                Flip
+              </button>
+            </div>
           </div>
 
-          {/* 右侧: 开始游戏按钮 */}
-          <div className="flex gap-2">
+          {/* 右列: 开始游戏按钮 */}
+          <div className="flex items-center gap-2 pt-4">
             <button
               onClick={startGame}
-              className="px-6 py-2 bg-yellow-500 text-black font-semibold rounded hover:bg-yellow-400 transition"
+              className="flex-1 py-2 bg-yellow-500 text-black font-semibold rounded hover:bg-yellow-400 transition whitespace-nowrap"
             >
-              Start Game →
+              Start Game
             </button>
             <button
               onClick={toggleAnalysisMode}
-              className={`px-4 py-2 rounded border transition ${
+              className={`flex-1 py-2 rounded border transition whitespace-nowrap ${
                 state.isAnalysisMode
                   ? 'bg-yellow-500 text-black border-yellow-500'
                   : 'border-gray-600 hover:border-gray-400'
               }`}
-              title={state.isAnalysisMode ? 'Analysis Opened' : 'Analysis Closed'}
+              title={state.isAnalysisMode ? 'Analysis On' : 'Analysis Off'}
             >
-              {state.isAnalysisMode ? 'Analysis Opened' : 'Analysis Closed'}
+              {state.isAnalysisMode ? 'Analysis On' : 'Analysis Off'}
             </button>
           </div>
         </div>

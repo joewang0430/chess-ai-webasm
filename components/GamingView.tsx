@@ -213,7 +213,7 @@ function MoveHistoryPanel() {
   };
 
   return (
-    <div className="w-48 bg-[#2a2a2a] rounded-lg p-4 max-h-[500px] overflow-y-auto">
+    <div className="bg-[#2a2a2a] rounded-lg p-4 max-h-[500px] overflow-y-auto">
       <h3 className="text-gray-400 mb-4">Move History</h3>
       <div className="text-sm space-y-1">
         {state.moveHistory.length === 0 ? (
@@ -521,18 +521,20 @@ export default function GamingView() {
           </div>
         )}
 
-        {/* 主布局 */}
-        <div className="flex gap-6">
-          {/* 左侧: 走棋历史 */}
+        {/* 主布局 - 使用 Grid 确保上下列对齐 */}
+        <div className="grid grid-cols-[192px_1fr_320px] gap-6">
+          {/* ========== Row 1: 主要内容 ========== */}
+          
+          {/* 左列: 走棋历史 */}
           <MoveHistoryPanel />
 
-          {/* 中间: 棋盘 */}
-          <div className="flex-1 flex justify-center">
+          {/* 中列: 棋盘 */}
+          <div className="flex justify-center">
             <ChessBoard />
           </div>
 
-          {/* 右侧: 配置面板（与棋盘上下齐平） */}
-          <div className="w-80 h-[500px] flex flex-col justify-between">
+          {/* 右列: 配置面板 */}
+          <div className="h-[500px] flex flex-col justify-between">
             {/* 顶部：根据是否翻转决定谁在上 */}
             <div>
               <PlayerPanel 
@@ -556,12 +558,11 @@ export default function GamingView() {
               />
             </div>
           </div>
-        </div>
 
-        {/* 底部工具栏 - 三区对齐布局 */}
-        <div className="mt-6 flex items-center justify-between">
-          {/* 左区: 对齐 Move History 面板 (w-48) */}
-          <div className="w-48 flex items-center justify-center gap-2">
+          {/* ========== Row 2: 工具栏 ========== */}
+          
+          {/* 左列: Theme 选择器 */}
+          <div className="flex items-center justify-center gap-2 pt-4">
             <span className="text-gray-400 text-sm">Theme</span>
             <div className="flex gap-1">
               {['green', 'blue', 'brown', 'purple', 'gray'].map((theme) => (
@@ -583,73 +584,77 @@ export default function GamingView() {
             </div>
           </div>
 
-          {/* 中区: 对齐棋盘区域 */}
-          <div className="flex-1 flex justify-center gap-2">
-            {/* Back to Current Board - 仅在预览模式显示 */}
-            {isPreviewMode && (
+          {/* 中列: 棋盘操作按钮 */}
+          <div className="flex items-center justify-center pt-4">
+            <div className="w-[500px] flex items-center justify-between">
+              {/* Back to Current Board - 始终显示，非预览模式下 disabled */}
               <button
                 onClick={() => setViewingMoveIndex(null)}
-                className="px-4 py-2 rounded border border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white transition"
-              >
-                ← Back to Current
-              </button>
-            )}
-            
-            {/* Undo / Reset Here - 互斥显示 */}
-            {isPreviewMode ? (
-              <button
-                onClick={() => {
-                  resetToMove(state.viewingMoveIndex!);
-                  // 如果当前轮到 AI，AI 会在状态更新后自动触发思考
-                }}
-                className="px-4 py-2 rounded border border-orange-500 text-orange-400 hover:bg-orange-500 hover:text-white transition"
-              >
-                Reset Here
-              </button>
-            ) : (
-              <button
-                onClick={undoMove}
-                disabled={!canUndo}
-                className={`px-4 py-2 rounded border transition ${
-                  canUndo 
-                    ? 'border-gray-600 hover:border-gray-400' 
+                disabled={!isPreviewMode}
+                className={`flex-1 px-2 py-2 rounded border transition whitespace-nowrap ${
+                  isPreviewMode
+                    ? 'border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white'
                     : 'border-gray-700 text-gray-600 cursor-not-allowed'
                 }`}
               >
-                Undo
+                Back to Current
               </button>
-            )}
-            
-            <button
-              onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { showLegalMoves: !state.settings.showLegalMoves } })}
-              className={`px-4 py-2 rounded border transition ${
-                state.settings.showLegalMoves 
-                  ? 'bg-yellow-500 text-black border-yellow-500' 
-                  : 'border-gray-600 hover:border-gray-400'
-              }`}
-            >
-              Legal Moves
-            </button>
-            <button
-              onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { boardFlipped: !state.settings.boardFlipped } })}
-              className="px-4 py-2 rounded border border-gray-600 hover:border-gray-400 transition"
-            >
-              Flip Board
-            </button>
+              
+              {/* Undo / Play from Here - 互斥显示 */}
+              {isPreviewMode ? (
+                <button
+                  onClick={() => {
+                    resetToMove(state.viewingMoveIndex!);
+                  }}
+                  className="flex-1 mx-2 px-2 py-2 rounded border border-orange-500 text-orange-400 hover:bg-orange-500 hover:text-white transition whitespace-nowrap"
+                >
+                  Play from Here
+                </button>
+              ) : (
+                <button
+                  onClick={undoMove}
+                  disabled={!canUndo}
+                  className={`flex-1 mx-2 px-2 py-2 rounded border transition whitespace-nowrap ${
+                    canUndo 
+                      ? 'border-gray-600 hover:border-gray-400' 
+                      : 'border-gray-700 text-gray-600 cursor-not-allowed'
+                  }`}
+                >
+                  Undo
+                </button>
+              )}
+              
+              <button
+                onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { showLegalMoves: !state.settings.showLegalMoves } })}
+                className={`flex-1 px-2 py-2 rounded border transition whitespace-nowrap ${
+                  state.settings.showLegalMoves 
+                    ? 'bg-yellow-500 text-black border-yellow-500' 
+                    : 'border-gray-600 hover:border-gray-400'
+                }`}
+              >
+                Legal Moves
+              </button>
+              <button
+                onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { boardFlipped: !state.settings.boardFlipped } })}
+                className="flex-1 ml-2 px-2 py-2 rounded border border-gray-600 hover:border-gray-400 transition whitespace-nowrap"
+              >
+                Flip
+              </button>
+            </div>
           </div>
 
-          {/* 右区: 对齐 Player Info 面板 (w-80) */}
-          <div className="w-80 flex items-center justify-center gap-2">
+          {/* 右列: 游戏控制按钮 */}
+          <div className="flex items-center gap-2 pt-4">
             <button
               onClick={handleBackToSetup}
-              className="px-4 py-2 rounded border border-gray-600 hover:border-gray-400 transition"
+              className="flex-1 py-2 rounded border border-gray-600 hover:border-gray-400 transition whitespace-nowrap"
             >
-              Reset Game
+              New Game
             </button>
             <button
               onClick={toggleAnalysisMode}
               disabled={!canAnalyze && !state.isAnalysisMode}
-              className={`px-4 py-2 rounded border transition ${
+              className={`flex-1 py-2 rounded border transition whitespace-nowrap ${
                 state.isAnalysisMode
                   ? 'bg-yellow-500 text-black border-yellow-500'
                   : canAnalyze
@@ -658,7 +663,7 @@ export default function GamingView() {
               }`}
               title={!canAnalyze && !state.isAnalysisMode ? "Need a Player's turn to analyze" : ""}
             >
-              {state.isAnalysisMode ? 'Analysis Opened' : 'Analysis Closed'}
+              {state.isAnalysisMode ? 'Analysis On' : 'Analysis Off'}
             </button>
           </div>
         </div>
