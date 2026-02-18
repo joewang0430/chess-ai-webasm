@@ -194,12 +194,82 @@ function AnalysisPanel() {
 // ============================================
 // 主组件: GamingView
 // ============================================
+
+// ============================================
+// MoveHistoryPanel 组件
+// ============================================
+function MoveHistoryPanel() {
+  const { state, setViewingMoveIndex } = useGame();
+  const viewingIndex = state.viewingMoveIndex;
+  
+  // 点击走法预览
+  const handleMoveClick = (moveIndex: number) => {
+    // 如果点击的是当前预览的走法，取消预览返回当前局面
+    if (viewingIndex === moveIndex) {
+      setViewingMoveIndex(null);
+    } else {
+      setViewingMoveIndex(moveIndex);
+    }
+  };
+
+  return (
+    <div className="w-48 bg-[#2a2a2a] rounded-lg p-4 max-h-[500px] overflow-y-auto">
+      <h3 className="text-gray-400 mb-4">Move History</h3>
+      <div className="text-sm space-y-1">
+        {state.moveHistory.length === 0 ? (
+          <span className="text-gray-500">No moves yet</span>
+        ) : (
+          // 按回合分组：每两步为一回合
+          Array.from({ length: Math.ceil(state.moveHistory.length / 2) }, (_, i) => {
+            const whiteMoveIndex = i * 2;
+            const blackMoveIndex = i * 2 + 1;
+            const whiteMove = state.moveHistory[whiteMoveIndex];
+            const blackMove = state.moveHistory[blackMoveIndex];
+            
+            return (
+              <div key={i} className="flex gap-2">
+                <span className="text-gray-500 w-6">{i + 1}.</span>
+                {/* 白方走法 */}
+                <button
+                  onClick={() => handleMoveClick(whiteMoveIndex)}
+                  className={`w-14 text-left rounded px-1 transition ${
+                    viewingIndex === whiteMoveIndex
+                      ? 'bg-yellow-500 text-black'
+                      : 'text-white hover:bg-[#3a3a3a]'
+                  }`}
+                >
+                  {whiteMove?.san || ''}
+                </button>
+                {/* 黑方走法 */}
+                {blackMove && (
+                  <button
+                    onClick={() => handleMoveClick(blackMoveIndex)}
+                    className={`w-14 text-left rounded px-1 transition ${
+                      viewingIndex === blackMoveIndex
+                        ? 'bg-yellow-500 text-black'
+                        : 'text-white hover:bg-[#3a3a3a]'
+                    }`}
+                  >
+                    {blackMove.san}
+                  </button>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function GamingView() {
   const { 
     state, 
     dispatch,
     makeMove, 
     undoMove, 
+    setViewingMoveIndex,
+    resetToMove,
     toggleAnalysisMode,
     setAnalysisData,
     setAIThinking,
@@ -210,6 +280,9 @@ export default function GamingView() {
     isCurrentPlayerAI,
     resetGame,
   } = useGame();
+
+  // 是否处于历史预览模式
+  const isPreviewMode = state.viewingMoveIndex !== null;
 
   // 获取当前 AI 的深度配置
   const currentAIDepth = state.turn === 'w' 
@@ -451,27 +524,7 @@ export default function GamingView() {
         {/* 主布局 */}
         <div className="flex gap-6">
           {/* 左侧: 走棋历史 */}
-          <div className="w-48 bg-[#2a2a2a] rounded-lg p-4 max-h-[500px] overflow-y-auto">
-            <h3 className="text-gray-400 mb-4">Move History</h3>
-            <div className="text-sm space-y-1">
-              {state.moveHistory.length === 0 ? (
-                <span className="text-gray-500">No moves yet</span>
-              ) : (
-                // 按回合分组：每两步为一回合（统一颜色显示）
-                Array.from({ length: Math.ceil(state.moveHistory.length / 2) }, (_, i) => {
-                  const whiteMove = state.moveHistory[i * 2];
-                  const blackMove = state.moveHistory[i * 2 + 1];
-                  return (
-                    <div key={i} className="flex gap-2">
-                      <span className="text-gray-500 w-6">{i + 1}.</span>
-                      <span className="text-white w-12">{whiteMove?.san || ''}</span>
-                      <span className="text-white w-12">{blackMove?.san || ''}</span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          <MoveHistoryPanel />
 
           {/* 中间: 棋盘 */}
           <div className="flex-1 flex justify-center">
@@ -505,11 +558,11 @@ export default function GamingView() {
           </div>
         </div>
 
-        {/* 底部工具栏 */}
+        {/* 底部工具栏 - 三区对齐布局 */}
         <div className="mt-6 flex items-center justify-between">
-          {/* 左侧: 主题 */}
-          <div className="flex items-center gap-2">
-            <span className="text-gray-400">Theme</span>
+          {/* 左区: 对齐 Move History 面板 (w-48) */}
+          <div className="w-48 flex items-center justify-center gap-2">
+            <span className="text-gray-400 text-sm">Theme</span>
             <div className="flex gap-1">
               {['green', 'blue', 'brown', 'purple', 'gray'].map((theme) => (
                 <button
@@ -530,26 +583,43 @@ export default function GamingView() {
             </div>
           </div>
 
-          {/* 中间: 功能按钮 */}
-          <div className="flex gap-2">
-            <button
-              onClick={handleBackToSetup}
-              className="px-4 py-2 rounded border border-gray-600 hover:border-gray-400 transition"
-            >
-              ← Back to Setup
-            </button>
-            <button
-              onClick={undoMove}
-              disabled={!canUndo}
-              className={`px-4 py-2 rounded border transition ${
-                canUndo 
-                  ? 'border-gray-600 hover:border-gray-400' 
-                  : 'border-gray-700 text-gray-600 cursor-not-allowed'
-              }`}
-              title={state.isAnalysisMode ? "First quit Analysis Mode" : ""}
-            >
-              Undo
-            </button>
+          {/* 中区: 对齐棋盘区域 */}
+          <div className="flex-1 flex justify-center gap-2">
+            {/* Back to Current Board - 仅在预览模式显示 */}
+            {isPreviewMode && (
+              <button
+                onClick={() => setViewingMoveIndex(null)}
+                className="px-4 py-2 rounded border border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white transition"
+              >
+                ← Back to Current
+              </button>
+            )}
+            
+            {/* Undo / Reset Here - 互斥显示 */}
+            {isPreviewMode ? (
+              <button
+                onClick={() => {
+                  resetToMove(state.viewingMoveIndex!);
+                  // 如果当前轮到 AI，AI 会在状态更新后自动触发思考
+                }}
+                className="px-4 py-2 rounded border border-orange-500 text-orange-400 hover:bg-orange-500 hover:text-white transition"
+              >
+                Reset Here
+              </button>
+            ) : (
+              <button
+                onClick={undoMove}
+                disabled={!canUndo}
+                className={`px-4 py-2 rounded border transition ${
+                  canUndo 
+                    ? 'border-gray-600 hover:border-gray-400' 
+                    : 'border-gray-700 text-gray-600 cursor-not-allowed'
+                }`}
+              >
+                Undo
+              </button>
+            )}
+            
             <button
               onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { showLegalMoves: !state.settings.showLegalMoves } })}
               className={`px-4 py-2 rounded border transition ${
@@ -558,7 +628,7 @@ export default function GamingView() {
                   : 'border-gray-600 hover:border-gray-400'
               }`}
             >
-              Show Legal Moves
+              Legal Moves
             </button>
             <button
               onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { boardFlipped: !state.settings.boardFlipped } })}
@@ -568,8 +638,14 @@ export default function GamingView() {
             </button>
           </div>
 
-          {/* 右侧: 分析模式按钮 */}
-          <div className="flex gap-2">
+          {/* 右区: 对齐 Player Info 面板 (w-80) */}
+          <div className="w-80 flex items-center justify-center gap-2">
+            <button
+              onClick={handleBackToSetup}
+              className="px-4 py-2 rounded border border-gray-600 hover:border-gray-400 transition"
+            >
+              Reset Game
+            </button>
             <button
               onClick={toggleAnalysisMode}
               disabled={!canAnalyze && !state.isAnalysisMode}

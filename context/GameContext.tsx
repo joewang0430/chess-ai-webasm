@@ -45,6 +45,7 @@ const initialState: GameState = {
   isCustomizing: false,
   gameResult: null,
   isAIThinking: false,
+  viewingMoveIndex: null,
 };
 
 // ============================================
@@ -153,6 +154,27 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case 'SET_AI_THINKING':
       return { ...state, isAIThinking: action.isThinking };
 
+    case 'SET_VIEWING_MOVE_INDEX':
+      return { ...state, viewingMoveIndex: action.index };
+
+    case 'RESET_TO_MOVE': {
+      // Reset the game to the state after move at index
+      // index = 0 means after first move, index = -1 or null means initial position
+      const targetIndex = action.index;
+      const newHistory = state.moveHistory.slice(0, targetIndex + 1);
+      const lastMove = newHistory[newHistory.length - 1];
+      const newFen = lastMove ? lastMove.fenAfter : INITIAL_FEN;
+      const turnFromFen = newFen.split(' ')[1] as PieceColor;
+      return {
+        ...state,
+        moveHistory: newHistory,
+        fen: newFen,
+        turn: turnFromFen,
+        viewingMoveIndex: null,
+        gameResult: null, // Clear game result when resetting
+      };
+    }
+
     case 'RESET_GAME':
       return {
         ...initialState,
@@ -196,6 +218,8 @@ interface GameContextType {
   decrementTime: (color: PieceColor, delta: number) => void;
   makeMove: (move: MoveRecord) => void;
   undoMove: () => void;
+  setViewingMoveIndex: (index: number | null) => void;
+  resetToMove: (index: number) => void;
   toggleAnalysisMode: () => void;
   setAnalysisData: (data: AnalysisData | null) => void;
   toggleCustomizing: () => void;
@@ -287,6 +311,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [state.white.type, state.black.type, state.turn, state.moveHistory.length]);
 
+  const setViewingMoveIndex = useCallback((index: number | null) => {
+    dispatch({ type: 'SET_VIEWING_MOVE_INDEX', index });
+  }, []);
+
+  const resetToMove = useCallback((index: number) => {
+    dispatch({ type: 'RESET_TO_MOVE', index });
+  }, []);
+
   const toggleAnalysisMode = useCallback(() => {
     dispatch({ type: 'SET_ANALYSIS_MODE', enabled: !state.isAnalysisMode });
   }, [state.isAnalysisMode]);
@@ -362,6 +394,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     decrementTime,
     makeMove,
     undoMove,
+    setViewingMoveIndex,
+    resetToMove,
     toggleAnalysisMode,
     setAnalysisData,
     toggleCustomizing,

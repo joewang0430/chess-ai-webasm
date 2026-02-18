@@ -145,6 +145,9 @@ export interface GameState {
   
   /** AI 是否正在思考 */
   isAIThinking: boolean;
+  
+  /** 正在预览的历史走法索引 (null = 当前实际棋局) */
+  viewingMoveIndex: number | null;
 }
 
 // --- Action 类型 (用于 Reducer) ---
@@ -165,6 +168,8 @@ export type GameAction =
   | { type: 'SET_CUSTOMIZING'; enabled: boolean }
   | { type: 'SET_GAME_RESULT'; result: GameResult | null }
   | { type: 'SET_AI_THINKING'; isThinking: boolean }
+  | { type: 'SET_VIEWING_MOVE_INDEX'; index: number | null }
+  | { type: 'RESET_TO_MOVE'; index: number }
   | { type: 'RESET_GAME' }
   | { type: 'START_GAME' };
 

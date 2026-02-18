@@ -84,32 +84,51 @@ export default function ChessBoard() {
   const showLegalMoves = state.settings.showLegalMoves;
   const colors = THEME_COLORS[theme] || THEME_COLORS.green;
 
+  // 预览模式: 如果 viewingMoveIndex 不为 null，显示历史局面
+  const isPreviewMode = state.viewingMoveIndex !== null;
+  
+  // 计算要显示的 FEN
+  const displayFen = useMemo(() => {
+    if (state.viewingMoveIndex === null) {
+      return state.fen; // 当前实际局面
+    }
+    // 预览历史局面
+    const targetMove = state.moveHistory[state.viewingMoveIndex];
+    return targetMove ? targetMove.fenAfter : state.fen;
+  }, [state.viewingMoveIndex, state.moveHistory, state.fen]);
+
   // 选中的格子
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   
   // 升变状态
   const [promotionMove, setPromotionMove] = useState<{ from: Square; to: Square } | null>(null);
 
-  // 解析当前棋局
-  const chess = useMemo(() => new Chess(state.fen), [state.fen]);
+  // 解析显示的棋局 (预览或当前)
+  const chess = useMemo(() => new Chess(displayFen), [displayFen]);
 
-  // 获取合法走法
+  // 获取合法走法 (仅在非预览模式下有效)
   const legalMoves = useMemo(() => {
-    if (!selectedSquare) return [];
+    if (!selectedSquare || isPreviewMode) return [];
     return chess.moves({ square: selectedSquare, verbose: true });
-  }, [chess, selectedSquare]);
+  }, [chess, selectedSquare, isPreviewMode]);
 
   // 合法目标格集合
   const legalTargets = useMemo(() => {
     return new Set(legalMoves.map((m) => m.to));
   }, [legalMoves]);
 
+  // 进入/离开预览模式时清除选中
+  React.useEffect(() => {
+    setSelectedSquare(null);
+    setPromotionMove(null);
+  }, [isPreviewMode]);
+
   // ============================================
   // 处理格子点击
   // ============================================
   const handleSquareClick = (square: Square) => {
-    // 如果游戏结束或是 AI 回合，不响应
-    if (state.gameResult || isCurrentPlayerAI) return;
+    // 如果是预览模式、游戏结束或是 AI 回合，不响应
+    if (isPreviewMode || state.gameResult || isCurrentPlayerAI) return;
 
     const piece = chess.get(square);
 
@@ -204,9 +223,15 @@ export default function ChessBoard() {
     
     const isSelected = square === selectedSquare;
     const isLegalTarget = showLegalMoves && legalTargets.has(square);
-    const isLastMove = state.moveHistory.length > 0 && (
-      state.moveHistory[state.moveHistory.length - 1].uci.startsWith(square) ||
-      state.moveHistory[state.moveHistory.length - 1].uci.substring(2, 4) === square
+    
+    // 计算上一步高亮：预览模式取对应历史走法，否则取最新走法
+    const lastMoveIndex = state.viewingMoveIndex !== null 
+      ? state.viewingMoveIndex 
+      : state.moveHistory.length - 1;
+    const lastMove = lastMoveIndex >= 0 ? state.moveHistory[lastMoveIndex] : null;
+    const isLastMove = lastMove && (
+      lastMove.uci.startsWith(square) ||
+      lastMove.uci.substring(2, 4) === square
     );
 
     // 背景色

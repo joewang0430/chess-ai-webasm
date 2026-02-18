@@ -102,7 +102,54 @@
 - **Flip Board**: 翻转棋盘视角
 - **Show Legal Moves**: 显示/隐藏合法走法提示
 - **Theme**: 棋盘配色切换
-- **Move History**: 走棋历史记录
+
+### 9. Move History（历史记录与预览）
+
+#### 9.1 核心功能
+
+| 特性 | 说明 |
+|------|------|
+| 点击预览 | 点击任意历史走法，棋盘显示该局面（只读预览，不可落子）|
+| 分开点击 | 每一行有两步（白/黑），分别可点击，高亮当前预览的那一步 |
+| 返回当前 | 点击 "Back to Current Board" 按钮退出预览，恢复当前实际局面 |
+| 重置到此 | 点击 "Reset Here" 按钮，将游戏状态回退到该历史局面 |
+
+#### 9.2 状态变量
+
+- `viewingMoveIndex: number | null`
+  - `null` = 当前实际棋局（正常模式）
+  - 数字 = 正在预览第 N 步后的局面（0 = 初始局面，1 = 第一步后，...）
+
+#### 9.3 按钮逻辑
+
+| 按钮 | 显示条件 | 行为 |
+|------|----------|------|
+| Back to Current Board | `viewingMoveIndex !== null` | 退出预览，`viewingMoveIndex = null` |
+| Undo | `viewingMoveIndex === null` | 执行现有的悔棋逻辑 |
+| Reset Here | `viewingMoveIndex !== null` | 将游戏回退到预览的历史局面，清除后续着法，若轮到 AI 则自动触发 AI 思考 |
+
+**注意**: Undo 和 Reset Here 互斥显示，共用同一个按钮位置。
+
+#### 9.4 Analysis Mode 与预览模式的关系
+
+- 进入历史预览模式时，Analysis Mode **继续分析当前实际棋局**（当前轮到的一方）
+- Analysis Mode 的 UI 显示不受历史预览影响
+- 只有当 "Reset Here" 真正回退局面后，Analysis Mode 才会更新分析新的当前局面
+
+#### 9.5 底部工具栏布局
+
+工具栏按三段对齐不同面板：
+
+| 对齐区域 | 按钮 |
+|----------|------|
+| Move History 面板 | Theme 选择器 |
+| 棋盘区域 | [Back to Current Board] [Undo/Reset Here] [Show Legal Moves] [Flip Board] |
+| Player Info 面板 | [Reset Game] [Analysis Opened/Closed] |
+
+**布局规则**:
+- 每个区域内的按钮居中对齐
+- "Back to Current Board" 仅在预览模式下显示
+- "Reset Game" 替代原来的 "Back to Setup"
 
 ---
 
@@ -177,9 +224,9 @@ chess-ai-webasm/
 
 ### 待办事项
 
-- Analysis 模式按钮点击之后，有的时候过了一会才有出现
-- Undo 逻辑：在analysis模式下可行
-- 历史棋盘点击 & 左右箭头重做
+- ~~Analysis 模式按钮点击之后，有的时候过了一会才有出现~~ ✅ 已修复（流式显示渐进深度）
+- ~~Undo 逻辑：在analysis模式下可行~~ ✅ 已实现
+- ~~历史棋盘点击 & 左右箭头重做~~ ✅ 需求已整理到 9. Move History 章节
 - 修改低于 level 20 的AI，目前都太强了
 - UI: 游戏结束弹窗 
 - UI: 按钮和整体布局 - 考虑添加 恢复到默认配置 按钮
