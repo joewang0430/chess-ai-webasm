@@ -174,3 +174,15 @@ chess-ai-webasm/
 - 游戏结束弹窗 UI
 - Customize Board 的具体交互方式
 - 移动端适配
+
+### 待办事项
+
+- Analysis 模式按钮点击之后，有的时候过了一会才有出现
+- Undo 逻辑：在analysis模式下可行
+- 历史棋盘点击 & 左右箭头重做
+- 修改低于 level 20 的AI，目前都太强了
+- UI: 游戏结束弹窗 
+- UI: 按钮和整体布局 - 考虑添加 恢复到默认配置 按钮
+- Customize Board 的具体交互方式
+- 移动端适配
+

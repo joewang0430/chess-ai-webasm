@@ -17,7 +17,7 @@ export default function TestPage() {
   
   // 引入 AI
   const { bestMove, isSearching, evaluatePosition, resetEngine } = useStockfish({
-    depth: 25,
+    depth: 1,
   });
 
   // 监听 AI 走棋

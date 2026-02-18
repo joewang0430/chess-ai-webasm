@@ -345,7 +345,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const currentPlayer = state.turn === 'w' ? state.white : state.black;
   const isCurrentPlayerAI = currentPlayer.type === 'stockfish';
-  const canUndo = state.moveHistory.length > 0 && !state.isAnalysisMode && !state.isAIThinking && !state.gameResult;
+  const canUndo = state.moveHistory.length > 0 && !state.isAIThinking && !state.gameResult;
   
   // 只有当前玩家是 Player 时才能分析
   // 如果双方都是 AI，不能分析
