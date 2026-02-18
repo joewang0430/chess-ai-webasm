@@ -98,7 +98,7 @@ function PlayerPanel({ color, label }: PlayerPanelProps) {
           onChange={(e) => setPlayerType(color, e.target.value as PlayerType)}
           className="bg-[#3a3a3a] text-white text-sm px-2 py-1 rounded border border-gray-600 focus:outline-none focus:border-yellow-500"
         >
-          <option value="player">Player</option>
+          <option value="player">Human</option>
           <option value="stockfish">Stockfish 17.1</option>
         </select>
         
