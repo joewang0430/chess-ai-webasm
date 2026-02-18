@@ -587,17 +587,17 @@ export default function GamingView() {
           {/* 中列: 棋盘操作按钮 */}
           <div className="flex items-center justify-center pt-4">
             <div className="w-[500px] flex items-center justify-between">
-              {/* Back to Current Board - 始终显示，非预览模式下 disabled */}
+              {/* Back to Now - 始终显示，非预览模式下 disabled */}
               <button
                 onClick={() => setViewingMoveIndex(null)}
                 disabled={!isPreviewMode}
                 className={`flex-1 px-2 py-2 rounded border transition whitespace-nowrap ${
                   isPreviewMode
-                    ? 'border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white'
+                    ? 'border-gray-600 hover:border-gray-400'
                     : 'border-gray-700 text-gray-600 cursor-not-allowed'
                 }`}
               >
-                Back to Current
+                Back to Now
               </button>
               
               {/* Undo / Play from Here - 互斥显示 */}
@@ -606,7 +606,7 @@ export default function GamingView() {
                   onClick={() => {
                     resetToMove(state.viewingMoveIndex!);
                   }}
-                  className="flex-1 mx-2 px-2 py-2 rounded border border-orange-500 text-orange-400 hover:bg-orange-500 hover:text-white transition whitespace-nowrap"
+                  className="flex-1 mx-2 px-2 py-2 rounded border border-gray-600 hover:border-gray-400 transition whitespace-nowrap"
                 >
                   Play from Here
                 </button>
@@ -628,11 +628,11 @@ export default function GamingView() {
                 onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { showLegalMoves: !state.settings.showLegalMoves } })}
                 className={`flex-1 px-2 py-2 rounded border transition whitespace-nowrap ${
                   state.settings.showLegalMoves 
-                    ? 'bg-yellow-500 text-black border-yellow-500' 
+                    ? 'border-yellow-500 text-yellow-500' 
                     : 'border-gray-600 hover:border-gray-400'
                 }`}
               >
-                Legal Moves
+                {state.settings.showLegalMoves ? 'Hide Legal' : 'Show Legal'}
               </button>
               <button
                 onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { boardFlipped: !state.settings.boardFlipped } })}
@@ -656,14 +656,14 @@ export default function GamingView() {
               disabled={!canAnalyze && !state.isAnalysisMode}
               className={`flex-1 py-2 rounded border transition whitespace-nowrap ${
                 state.isAnalysisMode
-                  ? 'bg-yellow-500 text-black border-yellow-500'
+                  ? 'border-yellow-500 text-yellow-500'
                   : canAnalyze
                     ? 'border-gray-600 hover:border-gray-400'
                     : 'border-gray-700 text-gray-600 cursor-not-allowed'
               }`}
               title={!canAnalyze && !state.isAnalysisMode ? "Need a Player's turn to analyze" : ""}
             >
-              {state.isAnalysisMode ? 'Analysis On' : 'Analysis Off'}
+              {state.isAnalysisMode ? 'Close Analysis' : 'Open Analysis'}
             </button>
           </div>
         </div>

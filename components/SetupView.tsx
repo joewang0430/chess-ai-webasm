@@ -102,6 +102,10 @@ export default function SetupView() {
     setFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
   };
 
+  // 右侧玩家面板位置：根据是否翻转
+  const topColor: PieceColor = state.settings.boardFlipped ? 'w' : 'b';
+  const bottomColor: PieceColor = state.settings.boardFlipped ? 'b' : 'w';
+
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-6xl mx-auto">
@@ -133,60 +137,66 @@ export default function SetupView() {
             <ChessBoard />
           </div>
 
-          {/* 右列: 配置面板 */}
-          <div className="space-y-4">
-            {/* 黑方配置 */}
-            <PlayerPanel color="b" label="Black" />
-
-            {/* 时间设置 */}
-            <div className="bg-[#2a2a2a] rounded-lg p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-gray-400">Time Limit:</span>
-                <select
-                  value={Math.floor(state.white.timeRemaining / 60000)}
-                  onChange={(e) => handleTimeChange(parseInt(e.target.value))}
-                  className="bg-[#3a3a3a] text-white px-3 py-1.5 rounded border border-gray-600 focus:outline-none focus:border-yellow-500"
-                >
-                  {timeOptions.map((t) => (
-                    <option key={t} value={t}>{t}:00</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 自定义棋盘时的先手选择 */}
-              {state.isCustomizing && (
-                <>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-400">Board is customized:</span>
-                    <select
-                      value={state.turn}
-                      onChange={(e) => {
-                        const newFen = state.fen.replace(
-                          / [wb] /,
-                          ` ${e.target.value} `
-                        );
-                        setFen(newFen);
-                      }}
-                      className="bg-[#3a3a3a] text-white px-3 py-1.5 rounded border border-gray-600 focus:outline-none focus:border-yellow-500"
-                    >
-                      <option value="w">White</option>
-                      <option value="b">Black</option>
-                    </select>
-                    <span className="text-gray-400">plays first.</span>
-                  </div>
-
-                  <button
-                    onClick={handleResetBoard}
-                    className="text-gray-400 underline hover:text-white transition"
-                  >
-                    Reset to classic board
-                  </button>
-                </>
-              )}
+          {/* 右列: 配置面板（与棋盘上下齐平） */}
+          <div className="h-[500px] flex flex-col justify-between">
+            {/* 顶部 */}
+            <div>
+              <PlayerPanel color={topColor} label={topColor === 'b' ? 'Black' : 'White'} />
             </div>
 
-            {/* 白方配置 */}
-            <PlayerPanel color="w" label="White" />
+            {/* 中间：时间设置 */}
+            <div className="my-3">
+              <div className="bg-[#2a2a2a] rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-400">Time Limit:</span>
+                  <select
+                    value={Math.floor(state.white.timeRemaining / 60000)}
+                    onChange={(e) => handleTimeChange(parseInt(e.target.value))}
+                    className="bg-[#3a3a3a] text-white px-3 py-1.5 rounded border border-gray-600 focus:outline-none focus:border-yellow-500"
+                  >
+                    {timeOptions.map((t) => (
+                      <option key={t} value={t}>{t}:00</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 自定义棋盘时的先手选择 */}
+                {state.isCustomizing && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400">Board is customized:</span>
+                      <select
+                        value={state.turn}
+                        onChange={(e) => {
+                          const newFen = state.fen.replace(
+                            / [wb] /,
+                            ` ${e.target.value} `
+                          );
+                          setFen(newFen);
+                        }}
+                        className="bg-[#3a3a3a] text-white px-3 py-1.5 rounded border border-gray-600 focus:outline-none focus:border-yellow-500"
+                      >
+                        <option value="w">White</option>
+                        <option value="b">Black</option>
+                      </select>
+                      <span className="text-gray-400">plays first.</span>
+                    </div>
+
+                    <button
+                      onClick={handleResetBoard}
+                      className="text-gray-400 underline hover:text-white transition"
+                    >
+                      Reset to classic board
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* 底部 */}
+            <div>
+              <PlayerPanel color={bottomColor} label={bottomColor === 'b' ? 'Black' : 'White'} />
+            </div>
           </div>
 
           {/* ========== Row 2: 工具栏 ========== */}
@@ -221,21 +231,21 @@ export default function SetupView() {
                 onClick={toggleCustomizing}
                 className={`flex-1 px-2 py-2 rounded border transition whitespace-nowrap ${
                   state.isCustomizing 
-                    ? 'bg-yellow-500 text-black border-yellow-500' 
+                    ? 'border-yellow-500 text-yellow-500' 
                     : 'border-gray-600 hover:border-gray-400'
                 }`}
               >
-                Customize Board
+                Setup Board
               </button>
               <button
                 onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { showLegalMoves: !state.settings.showLegalMoves } })}
                 className={`flex-1 mx-2 px-2 py-2 rounded border transition whitespace-nowrap ${
                   state.settings.showLegalMoves 
-                    ? 'bg-yellow-500 text-black border-yellow-500' 
+                    ? 'border-yellow-500 text-yellow-500' 
                     : 'border-gray-600 hover:border-gray-400'
                 }`}
               >
-                Show Legal Moves
+                {state.settings.showLegalMoves ? 'Hide Legal' : 'Show Legal'}
               </button>
               <button
                 onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { boardFlipped: !state.settings.boardFlipped } })}
@@ -258,12 +268,12 @@ export default function SetupView() {
               onClick={toggleAnalysisMode}
               className={`flex-1 py-2 rounded border transition whitespace-nowrap ${
                 state.isAnalysisMode
-                  ? 'bg-yellow-500 text-black border-yellow-500'
+                  ? 'border-yellow-500 text-yellow-500'
                   : 'border-gray-600 hover:border-gray-400'
               }`}
-              title={state.isAnalysisMode ? 'Analysis On' : 'Analysis Off'}
+              title={state.isAnalysisMode ? 'Close Analysis' : 'Open Analysis'}
             >
-              {state.isAnalysisMode ? 'Analysis On' : 'Analysis Off'}
+              {state.isAnalysisMode ? 'Close Analysis' : 'Open Analysis'}
             </button>
           </div>
         </div>
