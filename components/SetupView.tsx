@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Chess } from 'chess.js';
 import { useGame } from '@/context/GameContext';
 import { PieceColor, PlayerType, DEFAULT_TIME, MIN_DEPTH, MAX_DEPTH } from '@/types/game';
@@ -12,6 +12,17 @@ import ChessBoard from './ChessBoard';
 const PIECE_EMOJIS: Record<string, string> = {
   'P': '♙', 'N': '♘', 'B': '♗', 'R': '♖', 'Q': '♕', 'K': '♔',
   'p': '♟', 'n': '♞', 'b': '♝', 'r': '♜', 'q': '♛', 'k': '♚',
+};
+
+// 棋子分值
+const PIECE_VALUES: Record<string, number> = {
+  'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9,
+  'P': 1, 'N': 3, 'B': 3, 'R': 5, 'Q': 9,
+};
+
+// 初始棋子数量
+const STARTING_PIECES = {
+  p: 8, n: 2, b: 2, r: 2, q: 1,
 };
 
 // ============================================
@@ -154,6 +165,123 @@ function PlayerPanel({ color, label }: PlayerPanelProps) {
   );
 }
 
+// Unicode 棋子符号
+const PIECE_UNICODE: Record<string, { w: string; b: string }> = {
+  'p': { w: '♙', b: '♟' },
+  'n': { w: '♘', b: '♞' },
+  'b': { w: '♗', b: '♝' },
+  'r': { w: '♖', b: '♜' },
+  'q': { w: '♕', b: '♛' },
+};
+
+// ============================================
+// CapturedPiecesPanel 组件
+// ============================================
+function CapturedPiecesPanel() {
+  const { state } = useGame();
+  
+  // 计算被吃的棋子
+  const captured = useMemo(() => {
+    // 当前棋盘上的棋子
+    const currentPieces = { w: { p: 0, n: 0, b: 0, r: 0, q: 0 }, b: { p: 0, n: 0, b: 0, r: 0, q: 0 } };
+    
+    // 解析 FEN 获取当前棋盘棋子
+    const fenBoard = state.fen.split(' ')[0];
+    for (const char of fenBoard) {
+      if (char === '/' || /\d/.test(char)) continue;
+      const isWhite = char === char.toUpperCase();
+      const pieceType = char.toLowerCase() as 'p' | 'n' | 'b' | 'r' | 'q' | 'k';
+      if (pieceType !== 'k') {
+        currentPieces[isWhite ? 'w' : 'b'][pieceType]++;
+      }
+    }
+    
+    // 计算被吃的棋子（白方被吃 = 初始 - 当前）
+    const whiteCaptured: string[] = [];
+    const blackCaptured: string[] = [];
+    let whiteMaterial = 0;
+    let blackMaterial = 0;
+    
+    // 白方被吃的棋子（显示在黑方那边）
+    for (const [piece, startCount] of Object.entries(STARTING_PIECES)) {
+      const captured = startCount - currentPieces.w[piece as keyof typeof STARTING_PIECES];
+      for (let i = 0; i < captured; i++) {
+        whiteCaptured.push(piece);
+        blackMaterial += PIECE_VALUES[piece];
+      }
+    }
+    
+    // 黑方被吃的棋子（显示在白方那边）
+    for (const [piece, startCount] of Object.entries(STARTING_PIECES)) {
+      const captured = startCount - currentPieces.b[piece as keyof typeof STARTING_PIECES];
+      for (let i = 0; i < captured; i++) {
+        blackCaptured.push(piece);
+        whiteMaterial += PIECE_VALUES[piece];
+      }
+    }
+    
+    // 计算分差
+    const materialDiff = whiteMaterial - blackMaterial;
+    
+    return {
+      whiteCaptured, // 白方被吃的棋子
+      blackCaptured, // 黑方被吃的棋子
+      whiteMaterial,
+      blackMaterial,
+      materialDiff,
+    };
+  }, [state.fen]);
+  
+  // 按价值排序（后 -> 车 -> 象 -> 马 -> 兵）
+  const sortPieces = (pieces: string[]) => {
+    const order = ['q', 'r', 'b', 'n', 'p'];
+    return [...pieces].sort((a, b) => order.indexOf(a.toLowerCase()) - order.indexOf(b.toLowerCase()));
+  };
+  
+  // 渲染重叠的棋子 (chess.com style)
+  const renderOverlappingPieces = (pieces: string[], color: 'w' | 'b') => {
+    const sorted = sortPieces(pieces);
+    if (sorted.length === 0) return null;
+    
+    return (
+      <div className="flex items-center">
+        {sorted.map((piece, i) => (
+          <span 
+            key={i} 
+            className="text-xl leading-none"
+            style={{ 
+              marginLeft: i === 0 ? 0 : -4,
+              textShadow: color === 'w' ? '0 0 2px #000, 0 0 2px #000' : '0 0 2px #fff, 0 0 2px #fff',
+            }}
+          >
+            {PIECE_UNICODE[piece]?.[color]}
+          </span>
+        ))}
+      </div>
+    );
+  };
+  
+  return (
+    <div className="space-y-1 mb-2">
+      {/* 黑方捕获区 (显示白方被吃的棋子) */}
+      <div className="bg-[#2a2a2a] rounded px-3 py-2 flex items-center justify-between min-h-[32px]">
+        {renderOverlappingPieces(captured.whiteCaptured, 'w')}
+        {captured.materialDiff < 0 && (
+          <span className="text-sm font-medium text-gray-300">+{Math.abs(captured.materialDiff)}</span>
+        )}
+      </div>
+      
+      {/* 白方捕获区 (显示黑方被吃的棋子) */}
+      <div className="bg-[#2a2a2a] rounded px-3 py-2 flex items-center justify-between min-h-[32px]">
+        {renderOverlappingPieces(captured.blackCaptured, 'b')}
+        {captured.materialDiff > 0 && (
+          <span className="text-sm font-medium text-gray-300">+{captured.materialDiff}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ============================================
 // 主组件: SetupView
 // ============================================
@@ -203,17 +331,20 @@ export default function SetupView() {
         <div className="grid grid-cols-[192px_1fr_320px] gap-6">
           {/* ========== Row 1: 主要内容 ========== */}
           
-          {/* 左列: 走棋历史 */}
-          <div className="bg-[#2a2a2a] rounded-lg p-4">
-            <h3 className="text-gray-400 mb-4">Move History</h3>
-            <div className="text-sm text-gray-500">
-              {state.moveHistory.length === 0 ? (
-                <span>No moves yet</span>
-              ) : (
-                state.moveHistory.map((move, i) => (
-                  <div key={i}>{i + 1}. {move.san}</div>
-                ))
-              )}
+          {/* 左列: 捕获棋子 + 走棋历史 */}
+          <div className="flex flex-col h-[500px]">
+            <CapturedPiecesPanel />
+            <div className="bg-[#2a2a2a] rounded-lg p-4 flex-1 overflow-y-auto">
+              <h3 className="text-gray-400 mb-4">Move History</h3>
+              <div className="text-sm text-gray-500">
+                {state.moveHistory.length === 0 ? (
+                  <span>No moves yet</span>
+                ) : (
+                  state.moveHistory.map((move, i) => (
+                    <div key={i}>{i + 1}. {move.san}</div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
 
