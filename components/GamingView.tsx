@@ -11,6 +11,8 @@ import ChessBoard from './ChessBoard';
 // 时间格式化
 // ============================================
 function formatTime(ms: number): string {
+  // 0 表示不计时
+  if (ms === 0) return '--:--';
   const totalSeconds = Math.floor(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -52,10 +54,17 @@ function PlayerPanel({ color, label, isCurrentTurn }: PlayerPanelProps) {
 
   // 保存时间
   const saveTime = () => {
+    // 空输入表示 "No Limit"
+    if (timeInput.trim() === '') {
+      setTime(color, 0);
+      setIsEditingTime(false);
+      return;
+    }
     const ms = parseTimeInput(timeInput);
     if (ms !== null && ms > 0) {
       setTime(color, ms);
     }
+    // 非法输入：不改变，直接关闭编辑
     setIsEditingTime(false);
   };
 
@@ -105,7 +114,7 @@ function PlayerPanel({ color, label, isCurrentTurn }: PlayerPanelProps) {
           ) : (
             <>
               <span className={`text-lg font-mono ${
-                player.timeRemaining < 60000 ? 'text-red-500' : ''
+                player.timeRemaining > 0 && player.timeRemaining < 60000 ? 'text-red-500' : ''
               }`}>
                 {formatTime(player.timeRemaining)}
               </span>
@@ -267,6 +276,7 @@ export default function GamingView() {
   const { 
     state, 
     dispatch,
+    isHydrated,
     makeMove, 
     undoMove, 
     setViewingMoveIndex,
@@ -455,16 +465,26 @@ export default function GamingView() {
     // 游戏未开始或已结束时不计时
     if (state.phase !== 'playing' || state.gameResult) return;
 
+    const currentTime = state.turn === 'w' 
+      ? state.white.timeRemaining 
+      : state.black.timeRemaining;
+    
+    // 0 表示不计时，跳过倒计时逻辑
+    if (currentTime === 0) return;
+
     const interval = setInterval(() => {
-      const currentTime = state.turn === 'w' 
+      const time = state.turn === 'w' 
         ? state.white.timeRemaining 
         : state.black.timeRemaining;
+      
+      // 0 表示不计时，不扣减
+      if (time === 0) return;
       
       // 扣减 100ms
       decrementTime(state.turn, 100);
       
       // 检查是否超时（在下一个 tick 会自动判负）
-      if (currentTime <= 100) {
+      if (time <= 100) {
         setGameResult({
           winner: state.turn === 'w' ? 'b' : 'w',
           reason: 'timeout',
@@ -628,7 +648,7 @@ export default function GamingView() {
               <button
                 onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { showLegalMoves: !state.settings.showLegalMoves } })}
                 className={`flex-1 px-2 py-2 rounded border transition whitespace-nowrap ${
-                  state.settings.showLegalMoves 
+                  isHydrated && state.settings.showLegalMoves 
                     ? 'border-yellow-500 text-yellow-500' 
                     : 'border-gray-600 hover:border-gray-400'
                 }`}
@@ -656,7 +676,7 @@ export default function GamingView() {
               onClick={toggleAnalysisMode}
               disabled={!canAnalyze && !state.isAnalysisMode}
               className={`flex-1 py-2 rounded border transition whitespace-nowrap ${
-                state.isAnalysisMode
+                isHydrated && state.isAnalysisMode
                   ? 'border-yellow-500 text-yellow-500'
                   : canAnalyze
                     ? 'border-gray-600 hover:border-gray-400'

@@ -178,8 +178,8 @@ export type GameAction =
 /** 标准国际象棋初始 FEN */
 export const INITIAL_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
-/** 默认游戏时间 (15 分钟, 毫秒) */
-export const DEFAULT_TIME = 15 * 60 * 1000;
+/** 默认游戏时间 (0 = 不计时) */
+export const DEFAULT_TIME = 0;
 
 /** 默认 AI 深度 */
 export const DEFAULT_DEPTH = 15;

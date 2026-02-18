@@ -18,6 +18,8 @@ const PIECE_EMOJIS: Record<string, string> = {
 // 时间格式化
 // ============================================
 function formatTime(ms: number): string {
+  // 0 表示不计时
+  if (ms === 0) return '--:--';
   const totalSeconds = Math.floor(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -58,10 +60,17 @@ function PlayerPanel({ color, label }: PlayerPanelProps) {
 
   // 保存时间
   const saveTime = () => {
+    // 空输入表示 "No Limit"
+    if (timeInput.trim() === '') {
+      setTime(color, 0);
+      setIsEditingTime(false);
+      return;
+    }
     const ms = parseTimeInput(timeInput);
     if (ms !== null && ms > 0) {
       setTime(color, ms);
     }
+    // 非法输入：不改变，直接关闭编辑
     setIsEditingTime(false);
   };
 
@@ -149,15 +158,29 @@ function PlayerPanel({ color, label }: PlayerPanelProps) {
 // 主组件: SetupView
 // ============================================
 export default function SetupView() {
-  const { state, startGame, setFen, toggleCustomizing, canAnalyze, toggleAnalysisMode, dispatch } = useGame();
+  const { state, startGame, setFen, toggleCustomizing, canAnalyze, toggleAnalysisMode, dispatch, isHydrated } = useGame();
 
-  // 时间选项 (分钟)
-  const timeOptions = [1, 3, 5, 10, 15, 30, 60];
+  // 时间选项 (分钟, 0 表示不计时)
+  const timeOptions = [1, 3, 5, 10, 15, 30, 60, 120, 0];
 
   const handleTimeChange = (minutes: number) => {
-    const ms = minutes * 60 * 1000;
+    // 0 表示不计时
+    const ms = minutes === 0 ? 0 : minutes * 60 * 1000;
     dispatch({ type: 'SET_TIME', color: 'w', time: ms });
     dispatch({ type: 'SET_TIME', color: 'b', time: ms });
+    // 保存到 localStorage
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('timeLimit', String(ms));
+      }
+    } catch {}
+  };
+
+  // 获取当前选中的时间值（用于 select）
+  const getCurrentTimeValue = () => {
+    const ms = state.white.timeRemaining;
+    if (ms === 0) return 0;
+    return Math.floor(ms / 60000);
   };
 
   const handleResetBoard = () => {
@@ -212,12 +235,12 @@ export default function SetupView() {
                 <div className="flex items-center gap-2">
                   <span className="text-gray-400">Time Limit:</span>
                   <select
-                    value={Math.floor(state.white.timeRemaining / 60000)}
+                    value={getCurrentTimeValue()}
                     onChange={(e) => handleTimeChange(parseInt(e.target.value))}
                     className="bg-[#3a3a3a] text-white px-3 py-1.5 rounded border border-gray-600 focus:outline-none focus:border-yellow-500"
                   >
                     {timeOptions.map((t) => (
-                      <option key={t} value={t}>{t}:00</option>
+                      <option key={t} value={t}>{t === 0 ? 'No Limit' : `${t}:00`}</option>
                     ))}
                   </select>
                 </div>
@@ -302,7 +325,7 @@ export default function SetupView() {
               <button
                 onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { showLegalMoves: !state.settings.showLegalMoves } })}
                 className={`flex-1 mx-2 px-2 py-2 rounded border transition whitespace-nowrap ${
-                  state.settings.showLegalMoves 
+                  isHydrated && state.settings.showLegalMoves 
                     ? 'border-yellow-500 text-yellow-500' 
                     : 'border-gray-600 hover:border-gray-400'
                 }`}
@@ -329,7 +352,7 @@ export default function SetupView() {
             <button
               onClick={toggleAnalysisMode}
               className={`flex-1 py-2 rounded border transition whitespace-nowrap ${
-                state.isAnalysisMode
+                isHydrated && state.isAnalysisMode
                   ? 'border-yellow-500 text-yellow-500'
                   : 'border-gray-600 hover:border-gray-400'
               }`}

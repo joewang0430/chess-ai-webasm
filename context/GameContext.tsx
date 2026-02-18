@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useCallback, useState } from 'react';
 import {
   GameState,
   GameAction,
@@ -28,7 +28,7 @@ const initialPlayerConfig = (type: PlayerType = 'player'): PlayerConfig => ({
 
 const initialSettings: GameSettings = {
   theme: 'green',
-  showLegalMoves: true,
+  showLegalMoves: true, // 默认显示合法走法
   boardFlipped: false,
 };
 
@@ -41,7 +41,7 @@ const initialState: GameState = {
   moveHistory: [],
   settings: initialSettings,
   analysis: null,
-  isAnalysisMode: false,
+  isAnalysisMode: true, // 默认开启分析模式
   isCustomizing: false,
   gameResult: null,
   isAIThinking: false,
@@ -208,6 +208,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 interface GameContextType {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
+  isHydrated: boolean; // localStorage 加载完成标志
   
   // 便捷方法
   startGame: () => void;
@@ -244,6 +245,7 @@ const GameContext = createContext<GameContextType | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   // --- 便捷方法 ---
 
@@ -323,24 +325,56 @@ export function GameProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_ANALYSIS_MODE', enabled: !state.isAnalysisMode });
   }, [state.isAnalysisMode]);
 
-  // 从 localStorage 读取 Analysis Mode 初始值
+  // 从 localStorage 读取所有设置的初始值（一次性加载避免跳变）
   React.useEffect(() => {
     try {
-      const saved = typeof window !== 'undefined' ? window.localStorage.getItem('analysisMode') : null;
-      if (saved !== null) {
-        dispatch({ type: 'SET_ANALYSIS_MODE', enabled: saved === 'true' });
+      if (typeof window !== 'undefined') {
+        // Analysis Mode (默认 true)
+        const analysisMode = window.localStorage.getItem('analysisMode');
+        if (analysisMode !== null) {
+          dispatch({ type: 'SET_ANALYSIS_MODE', enabled: analysisMode === 'true' });
+        }
+        
+        // Show Legal Moves (默认 true)
+        const showLegalMoves = window.localStorage.getItem('showLegalMoves');
+        if (showLegalMoves !== null) {
+          dispatch({ type: 'SET_SETTINGS', settings: { showLegalMoves: showLegalMoves === 'true' } });
+        }
+        
+        // Time Limit (默认 0 = No Limit)
+        const timeLimit = window.localStorage.getItem('timeLimit');
+        if (timeLimit !== null) {
+          const ms = parseInt(timeLimit, 10);
+          if (!isNaN(ms) && ms >= 0) {
+            dispatch({ type: 'SET_TIME', color: 'w', time: ms });
+            dispatch({ type: 'SET_TIME', color: 'b', time: ms });
+          }
+        }
       }
     } catch {}
+    // 标记 hydration 完成
+    setIsHydrated(true);
   }, []);
 
   // 将 Analysis Mode 持久化到 localStorage
   React.useEffect(() => {
+    if (!isHydrated) return; // 等待 hydration 完成后再开始持久化
     try {
       if (typeof window !== 'undefined') {
         window.localStorage.setItem('analysisMode', String(state.isAnalysisMode));
       }
     } catch {}
-  }, [state.isAnalysisMode]);
+  }, [state.isAnalysisMode, isHydrated]);
+
+  // 将 showLegalMoves 持久化到 localStorage
+  React.useEffect(() => {
+    if (!isHydrated) return; // 等待 hydration 完成后再开始持久化
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('showLegalMoves', String(state.settings.showLegalMoves));
+      }
+    } catch {}
+  }, [state.settings.showLegalMoves, isHydrated]);
 
   const setAnalysisData = useCallback((data: AnalysisData | null) => {
     dispatch({ type: 'SET_ANALYSIS_DATA', data });
@@ -386,6 +420,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const contextValue: GameContextType = {
     state,
     dispatch,
+    isHydrated,
     startGame,
     resetGame,
     setPlayerType,
