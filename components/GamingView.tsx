@@ -323,7 +323,7 @@ function CapturedPiecesPanel() {
   return (
     <div className="space-y-1 mb-2">
       {/* 黑方捕获区 (显示白方被吃的棋子) */}
-      <div className="bg-[#2a2a2a] rounded px-3 py-2 flex items-center justify-between min-h-[32px]">
+      <div className="bg-[#2a2a2a] rounded-t-lg px-3 py-2 flex items-center justify-between min-h-[32px]">
         {renderOverlappingPieces(captured.whiteCaptured, 'w')}
         {captured.materialDiff < 0 && (
           <span className="text-sm font-medium text-gray-300">+{Math.abs(captured.materialDiff)}</span>
@@ -331,7 +331,7 @@ function CapturedPiecesPanel() {
       </div>
       
       {/* 白方捕获区 (显示黑方被吃的棋子) */}
-      <div className="bg-[#2a2a2a] rounded px-3 py-2 flex items-center justify-between min-h-[32px]">
+      <div className="bg-[#2a2a2a] rounded-b-lg px-3 py-2 flex items-center justify-between min-h-[32px]">
         {renderOverlappingPieces(captured.blackCaptured, 'b')}
         {captured.materialDiff > 0 && (
           <span className="text-sm font-medium text-gray-300">+{captured.materialDiff}</span>
@@ -359,9 +359,9 @@ function MoveHistoryPanel() {
   };
 
   return (
-    <div className="bg-[#2a2a2a] rounded-lg p-4 flex-1 overflow-y-auto">
-      <h3 className="text-gray-400 mb-4">Move History</h3>
-      <div className="text-sm space-y-1">
+    <div className="bg-[#2a2a2a] rounded-lg flex-1 flex flex-col overflow-hidden">
+      <h3 className="text-gray-400 text-sm text-center py-2 shrink-0">Move History</h3>
+      <div className="text-sm space-y-1 px-4 pb-4 flex-1 overflow-y-auto">
         {state.moveHistory.length === 0 ? (
           <span className="text-gray-500">No moves yet</span>
         ) : (

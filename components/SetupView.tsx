@@ -264,7 +264,7 @@ function CapturedPiecesPanel() {
   return (
     <div className="space-y-1 mb-2">
       {/* 黑方捕获区 (显示白方被吃的棋子) */}
-      <div className="bg-[#2a2a2a] rounded px-3 py-2 flex items-center justify-between min-h-[32px]">
+      <div className="bg-[#2a2a2a] rounded-t-lg px-3 py-2 flex items-center justify-between min-h-[32px]">
         {renderOverlappingPieces(captured.whiteCaptured, 'w')}
         {captured.materialDiff < 0 && (
           <span className="text-sm font-medium text-gray-300">+{Math.abs(captured.materialDiff)}</span>
@@ -272,7 +272,7 @@ function CapturedPiecesPanel() {
       </div>
       
       {/* 白方捕获区 (显示黑方被吃的棋子) */}
-      <div className="bg-[#2a2a2a] rounded px-3 py-2 flex items-center justify-between min-h-[32px]">
+      <div className="bg-[#2a2a2a] rounded-b-lg px-3 py-2 flex items-center justify-between min-h-[32px]">
         {renderOverlappingPieces(captured.blackCaptured, 'b')}
         {captured.materialDiff > 0 && (
           <span className="text-sm font-medium text-gray-300">+{captured.materialDiff}</span>
