@@ -69,18 +69,21 @@ function PlayerPanel({ color, label, isCurrentTurn }: PlayerPanelProps) {
   };
 
   return (
-    <div className={`bg-[#2a2a2a] rounded-lg p-4 space-y-3 ${
+    <div className={`bg-[#2a2a2a] rounded-lg p-3 space-y-2 ${
       isCurrentTurn ? 'ring-2 ring-yellow-500' : ''
     }`}>
       {/* 标题行 */}
       <div className="flex items-center justify-between">
-        <span className="text-lg font-semibold">{label}</span>
+        {/* 颜色方块 */}
+        <div className={`w-5 h-5 rounded-sm border border-gray-500 ${
+          color === 'w' ? 'bg-white' : 'bg-black'
+        }`} title={label} />
         
         {/* 类型选择 */}
         <select
           value={player.type}
           onChange={(e) => setPlayerType(color, e.target.value as PlayerType)}
-          className="bg-[#3a3a3a] text-white px-3 py-1.5 rounded border border-gray-600 focus:outline-none focus:border-yellow-500"
+          className="bg-[#3a3a3a] text-white text-sm px-2 py-1 rounded border border-gray-600 focus:outline-none focus:border-yellow-500"
         >
           <option value="player">Player</option>
           <option value="stockfish">Stockfish 17.1</option>
@@ -96,22 +99,22 @@ function PlayerPanel({ color, label, isCurrentTurn }: PlayerPanelProps) {
               onKeyDown={handleTimeKeyDown}
               onBlur={saveTime}
               autoFocus
-              className="w-20 text-xl font-mono bg-[#3a3a3a] text-white px-2 py-1 rounded border border-yellow-500 focus:outline-none text-center"
+              className="w-20 text-lg font-mono bg-[#3a3a3a] text-white px-1 py-0 rounded border border-yellow-500 focus:outline-none text-center"
               placeholder="MM:SS"
             />
           ) : (
             <>
-              <span className={`text-2xl font-mono ${
+              <span className={`text-lg font-mono ${
                 player.timeRemaining < 60000 ? 'text-red-500' : ''
               }`}>
                 {formatTime(player.timeRemaining)}
               </span>
               <button
                 onClick={startEditTime}
-                className="text-gray-500 hover:text-yellow-500 transition p-1"
+                className="text-gray-500 hover:text-yellow-500 transition p-0.5"
                 title="Edit time"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
               </button>
@@ -122,17 +125,15 @@ function PlayerPanel({ color, label, isCurrentTurn }: PlayerPanelProps) {
 
       {/* AI 深度调节 */}
       {player.type === 'stockfish' ? (
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-400">Level: {player.aiConfig.depth}</span>
-          </div>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-400 whitespace-nowrap">Level: {player.aiConfig.depth}</span>
           <input
             type="range"
             min={MIN_DEPTH}
             max={MAX_DEPTH}
             value={player.aiConfig.depth}
             onChange={(e) => setAIDepth(color, parseInt(e.target.value))}
-            className="w-full h-2 bg-[#3a3a3a] rounded-lg appearance-none cursor-pointer accent-yellow-500"
+            className="flex-1 h-2 bg-[#3a3a3a] rounded-lg appearance-none cursor-pointer accent-yellow-500"
           />
         </div>
       ) : (

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Chess } from 'chess.js';
 import { useGame } from '@/context/GameContext';
 import { PieceColor, PlayerType, DEFAULT_TIME, MIN_DEPTH, MAX_DEPTH } from '@/types/game';
@@ -24,6 +24,16 @@ function formatTime(ms: number): string {
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
+// 时间解析：将 "MM:SS" 转换为毫秒
+function parseTimeInput(input: string): number | null {
+  const match = input.match(/^(\d{1,3}):(\d{2})$/);
+  if (!match) return null;
+  const minutes = parseInt(match[1]);
+  const seconds = parseInt(match[2]);
+  if (seconds >= 60) return null;
+  return (minutes * 60 + seconds) * 1000;
+}
+
 // ============================================
 // 玩家配置面板
 // ============================================
@@ -35,49 +45,101 @@ interface PlayerPanelProps {
 function PlayerPanel({ color, label }: PlayerPanelProps) {
   const { state, setPlayerType, setAIDepth, setTime } = useGame();
   const player = color === 'w' ? state.white : state.black;
+  
+  // 时间编辑状态
+  const [isEditingTime, setIsEditingTime] = useState(false);
+  const [timeInput, setTimeInput] = useState('');
+
+  // 开始编辑时间
+  const startEditTime = () => {
+    setTimeInput(formatTime(player.timeRemaining));
+    setIsEditingTime(true);
+  };
+
+  // 保存时间
+  const saveTime = () => {
+    const ms = parseTimeInput(timeInput);
+    if (ms !== null && ms > 0) {
+      setTime(color, ms);
+    }
+    setIsEditingTime(false);
+  };
+
+  // 按键处理
+  const handleTimeKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      saveTime();
+    } else if (e.key === 'Escape') {
+      setIsEditingTime(false);
+    }
+  };
 
   return (
-    <div className="bg-[#2a2a2a] rounded-lg p-4 space-y-4">
+    <div className="bg-[#2a2a2a] rounded-lg p-3 space-y-2">
       {/* 标题行 */}
       <div className="flex items-center justify-between">
-        <span className="text-lg font-semibold">{label}</span>
+        {/* 颜色方块 */}
+        <div className={`w-5 h-5 rounded-sm border border-gray-500 ${
+          color === 'w' ? 'bg-white' : 'bg-black'
+        }`} title={label} />
         
         {/* 类型选择 */}
         <select
           value={player.type}
           onChange={(e) => setPlayerType(color, e.target.value as PlayerType)}
-          className="bg-[#3a3a3a] text-white px-3 py-1.5 rounded border border-gray-600 focus:outline-none focus:border-yellow-500"
+          className="bg-[#3a3a3a] text-white text-sm px-2 py-1 rounded border border-gray-600 focus:outline-none focus:border-yellow-500"
         >
           <option value="player">Player</option>
           <option value="stockfish">Stockfish 17.1</option>
         </select>
         
-        {/* 时间显示 */}
-        <span className="text-xl font-mono">{formatTime(player.timeRemaining)}</span>
+        {/* 时间显示/编辑 */}
+        <div className="flex items-center gap-1">
+          {isEditingTime ? (
+            <input
+              type="text"
+              value={timeInput}
+              onChange={(e) => setTimeInput(e.target.value)}
+              onKeyDown={handleTimeKeyDown}
+              onBlur={saveTime}
+              autoFocus
+              className="w-20 text-lg font-mono bg-[#3a3a3a] text-white px-1 py-0 rounded border border-yellow-500 focus:outline-none text-center"
+              placeholder="MM:SS"
+            />
+          ) : (
+            <>
+              <span className="text-lg font-mono">
+                {formatTime(player.timeRemaining)}
+              </span>
+              <button
+                onClick={startEditTime}
+                className="text-gray-500 hover:text-yellow-500 transition p-0.5"
+                title="Edit time"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* AI 深度调节 (仅当选择 Stockfish 时显示) */}
-      {player.type === 'stockfish' && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-400">Level: {player.aiConfig.depth}</span>
-          </div>
+      {player.type === 'stockfish' ? (
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-400 whitespace-nowrap">Level: {player.aiConfig.depth}</span>
           <input
             type="range"
             min={MIN_DEPTH}
             max={MAX_DEPTH}
             value={player.aiConfig.depth}
             onChange={(e) => setAIDepth(color, parseInt(e.target.value))}
-            className="w-full h-2 bg-[#3a3a3a] rounded-lg appearance-none cursor-pointer accent-yellow-500"
+            className="flex-1 h-2 bg-[#3a3a3a] rounded-lg appearance-none cursor-pointer accent-yellow-500"
           />
         </div>
-      )}
-
-      {/* Player 时显示 Level: N/A */}
-      {player.type === 'player' && (
-        <div className="text-sm text-gray-500">
-          Level: N/A
-        </div>
+      ) : (
+        <div className="text-sm text-gray-500">Level: N/A</div>
       )}
     </div>
   );
