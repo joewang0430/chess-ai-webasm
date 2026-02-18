@@ -87,7 +87,7 @@ function PlayerPanel({ color, label }: PlayerPanelProps) {
 // 主组件: SetupView
 // ============================================
 export default function SetupView() {
-  const { state, startGame, setFen, toggleCustomizing, canAnalyze, dispatch } = useGame();
+  const { state, startGame, setFen, toggleCustomizing, canAnalyze, toggleAnalysisMode, dispatch } = useGame();
 
   // 时间选项 (分钟)
   const timeOptions = [1, 3, 5, 10, 15, 30, 60];
@@ -252,15 +252,15 @@ export default function SetupView() {
               Start Game →
             </button>
             <button
-              disabled={!canAnalyze}
+              onClick={toggleAnalysisMode}
               className={`px-4 py-2 rounded border transition ${
-                canAnalyze 
-                  ? 'border-gray-600 hover:border-gray-400' 
-                  : 'border-gray-700 text-gray-600 cursor-not-allowed'
+                state.isAnalysisMode
+                  ? 'bg-yellow-500 text-black border-yellow-500'
+                  : 'border-gray-600 hover:border-gray-400'
               }`}
-              title={!canAnalyze ? "Start the game first" : ""}
+              title={state.isAnalysisMode ? 'Analysis Opened' : 'Analysis Closed'}
             >
-              Analysis Mode
+              {state.isAnalysisMode ? 'Analysis Opened' : 'Analysis Closed'}
             </button>
           </div>
         </div>

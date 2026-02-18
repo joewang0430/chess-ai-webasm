@@ -564,7 +564,7 @@ export default function GamingView() {
               }`}
               title={!canAnalyze && !state.isAnalysisMode ? "Need a Player's turn to analyze" : ""}
             >
-              Analysis Mode
+              {state.isAnalysisMode ? 'Analysis Opened' : 'Analysis Closed'}
             </button>
           </div>
         </div>

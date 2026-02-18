@@ -158,6 +158,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         ...initialState,
         // 保留设置
         settings: state.settings,
+        // 保留 Analysis Mode 状态
+        isAnalysisMode: state.isAnalysisMode,
         // 保留自定义棋盘（如果有）
         // 如果需要保留自定义 FEN，可以在这里处理
       };
@@ -168,7 +170,6 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         phase: 'playing',
         gameResult: null,
         moveHistory: [],
-        isAnalysisMode: false,
         analysis: null,
         isCustomizing: false,
       };
@@ -288,6 +289,25 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const toggleAnalysisMode = useCallback(() => {
     dispatch({ type: 'SET_ANALYSIS_MODE', enabled: !state.isAnalysisMode });
+  }, [state.isAnalysisMode]);
+
+  // 从 localStorage 读取 Analysis Mode 初始值
+  React.useEffect(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? window.localStorage.getItem('analysisMode') : null;
+      if (saved !== null) {
+        dispatch({ type: 'SET_ANALYSIS_MODE', enabled: saved === 'true' });
+      }
+    } catch {}
+  }, []);
+
+  // 将 Analysis Mode 持久化到 localStorage
+  React.useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('analysisMode', String(state.isAnalysisMode));
+      }
+    } catch {}
   }, [state.isAnalysisMode]);
 
   const setAnalysisData = useCallback((data: AnalysisData | null) => {
