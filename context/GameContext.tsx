@@ -232,11 +232,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const setPlayerType = useCallback((color: PieceColor, type: PlayerType) => {
     dispatch({ type: 'SET_PLAYER_TYPE', color, playerType: type });
-    // 如果在分析模式下把当前玩家改成 AI，关闭分析模式
-    if (type === 'stockfish' && state.turn === color && state.isAnalysisMode) {
-      dispatch({ type: 'SET_ANALYSIS_MODE', enabled: false });
-    }
-  }, [state.turn, state.isAnalysisMode]);
+  }, []);
 
   const setAIDepth = useCallback((color: PieceColor, depth: number) => {
     dispatch({ type: 'SET_AI_DEPTH', color, depth });
@@ -291,16 +287,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [state.white.type, state.black.type, state.turn, state.moveHistory.length]);
 
   const toggleAnalysisMode = useCallback(() => {
-    if (state.isAnalysisMode) {
-      dispatch({ type: 'SET_ANALYSIS_MODE', enabled: false });
-    } else {
-      // 只有当前玩家是 Player 时才能开启分析模式
-      const currentPlayerType = state.turn === 'w' ? state.white.type : state.black.type;
-      if (currentPlayerType === 'player') {
-        dispatch({ type: 'SET_ANALYSIS_MODE', enabled: true });
-      }
-    }
-  }, [state.isAnalysisMode, state.turn, state.white.type, state.black.type]);
+    dispatch({ type: 'SET_ANALYSIS_MODE', enabled: !state.isAnalysisMode });
+  }, [state.isAnalysisMode]);
 
   const setAnalysisData = useCallback((data: AnalysisData | null) => {
     dispatch({ type: 'SET_ANALYSIS_DATA', data });
@@ -341,10 +329,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   
   // 只有当前玩家是 Player 时才能分析
   // 如果双方都是 AI，不能分析
-  const canAnalyze = 
-    currentPlayer.type === 'player' && 
-    state.phase === 'playing' &&
-    !state.gameResult;
+  const canAnalyze = state.phase === 'playing' && !state.gameResult;
 
   const contextValue: GameContextType = {
     state,
