@@ -238,18 +238,28 @@ export default function GamingView() {
 
   // AI 走棋开始时间 (用于最小等待时间)
   const aiThinkStartRef = useRef<number>(0);
+  
+  // 缓存已完成的分析结果 (方案2: 只缓存深度25完成的结果)
+  const analysisCacheRef = useRef<{ fen: string; data: typeof analysisData } | null>(null);
 
   // ============================================
-  // 同步分析数据到全局状态
+  // 同步分析数据到全局状态 & 缓存已完成结果
   // ============================================
   useEffect(() => {
     if (state.isAnalysisMode && analysisData) {
       setAnalysisData(analysisData);
+      // 分析完成时缓存结果
+      if (!analysisData.isAnalyzing) {
+        analysisCacheRef.current = { fen: state.fen, data: analysisData };
+      }
     }
-  }, [analysisData, state.isAnalysisMode, setAnalysisData]);
+  }, [analysisData, state.isAnalysisMode, setAnalysisData, state.fen]);
 
   // 在走棋方切换时，立即停止旧的分析并清空数据，避免滞后显示
+  // 同时清除缓存（因为FEN已变化）
   useEffect(() => {
+    // 清除缓存
+    analysisCacheRef.current = null;
     if (state.isAnalysisMode) {
       stopSearch();
       setAnalysisData(null);
@@ -335,12 +345,20 @@ export default function GamingView() {
   // ============================================
   useEffect(() => {
     if (state.isAnalysisMode && !isCurrentPlayerAI && isReady) {
-      // 先停止任何旧的搜索并清空旧分析，避免滞后
-      stopSearch();
-      setAnalysisData(null);
       // 进入分析模式时清理 AI 思考标记，避免面板因 isAIThinking 被隐藏
       setAIThinking(false);
-      // 分析模式使用最大深度 25
+      
+      // 检查缓存：如果有匹配当前FEN的已完成分析，直接使用
+      const cache = analysisCacheRef.current;
+      if (cache && cache.fen === state.fen && cache.data && !cache.data.isAnalyzing) {
+        setAnalysisData(cache.data);
+        setAnalysisMode(true);
+        return;
+      }
+      
+      // 否则发起新搜索
+      stopSearch();
+      setAnalysisData(null);
       setDepth(ANALYSIS_DEPTH);
       setAnalysisMode(true);
       evaluatePosition(state.fen);
