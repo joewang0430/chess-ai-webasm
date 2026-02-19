@@ -235,20 +235,22 @@ function EvalBar({ score, isFlipped }: { score?: number; isFlipped?: boolean }) 
     return sigmoid * 100;
   }, [score]);
 
-  // 如果棋盘翻转，bar 也要翻转（白在上变成白在下）
-  const displayWhitePercent = isFlipped ? (100 - whitePercent) : whitePercent;
-
+  // 默认：黑在上，白在下
+  // Flip：白在上，黑在下
   return (
-    <div className="w-3 rounded-sm overflow-hidden flex flex-col ml-1" style={{ height: 500 }}>
-      {/* 黑色区域（顶部） */}
+    <div 
+      className={`w-3 rounded-sm overflow-hidden flex ${isFlipped ? 'flex-col-reverse' : 'flex-col'}`} 
+      style={{ height: 500 }}
+    >
+      {/* 黑色区域 */}
       <div 
         className="bg-zinc-700 transition-all duration-500 ease-out"
-        style={{ height: `${100 - displayWhitePercent}%` }}
+        style={{ height: `${100 - whitePercent}%` }}
       />
-      {/* 白色区域（底部） */}
+      {/* 白色区域 */}
       <div 
         className="bg-zinc-200 transition-all duration-500 ease-out"
-        style={{ height: `${displayWhitePercent}%` }}
+        style={{ height: `${whitePercent}%` }}
       />
     </div>
   );
@@ -719,7 +721,7 @@ export default function GamingView() {
         )}
 
         {/* 主布局 - 使用 Grid 确保上下列对齐 */}
-        <div className={`grid gap-6 ${state.isAnalysisMode ? 'grid-cols-[192px_516px_320px]' : 'grid-cols-[192px_500px_320px]'}`}>
+        <div className="grid grid-cols-[192px_516px_320px] gap-6">
           {/* ========== Row 1: 主要内容 ========== */}
           
           {/* 左列: 捕获棋子 + 走棋历史 */}
@@ -728,15 +730,18 @@ export default function GamingView() {
             <MoveHistoryPanel />
           </div>
 
-          {/* 中列: 棋盘 + Eval Bar (Analysis Mode 时显示) */}
+          {/* 中列: 棋盘 + Eval Bar 区域 (始终预留空间) */}
           <div className="flex">
             <ChessBoard />
-            {state.isAnalysisMode && (
-              <EvalBar 
-                score={analysisData?.topMoves[0]?.score} 
-                isFlipped={state.settings.boardFlipped} 
-              />
-            )}
+            {/* Bar 区域：始终占 16px，保持右侧面板位置稳定 */}
+            <div className="w-4 ml-1 flex-shrink-0">
+              {state.isAnalysisMode && (
+                <EvalBar 
+                  score={analysisData?.topMoves[0]?.score} 
+                  isFlipped={state.settings.boardFlipped} 
+                />
+              )}
+            </div>
           </div>
 
           {/* 右列: 配置面板 */}
@@ -790,9 +795,9 @@ export default function GamingView() {
             </div>
           </div>
 
-          {/* 中列: 棋盘操作按钮 */}
+          {/* 中列: 棋盘操作按钮 - 固定 500px 只和棋盘对齐 */}
           <div className="pt-4">
-            <div className="flex items-center justify-between">
+            <div className="w-[500px] flex items-center justify-between">
               {/* Back to Now - 始终显示，非预览模式下 disabled */}
               <button
                 onClick={() => setViewingMoveIndex(null)}
