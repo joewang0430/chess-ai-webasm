@@ -224,29 +224,32 @@ function AnalysisPanel() {
 // EvalBar 组件 - 棋盘右侧的评估条
 // ============================================
 function EvalBar({ score, isFlipped }: { score?: number; isFlipped?: boolean }) {
-  // 保存上一次有效的 score（初始值 30 centipawns，约等于 0.3）
-  const lastValidScoreRef = useRef<number>(30);
-  
-  // 如果 score 有效，更新保存的值
-  if (score !== undefined) {
-    lastValidScoreRef.current = score;
-  }
+  // 保存上一次有效的 whitePercent 和 score（用于宕机时保持位置）
+  const lastValidRef = useRef<{ whitePercent: number; score: number }>({ whitePercent: 50, score: 0 });
   
   // 是否处于宕机状态（score === undefined）
   const isStalled = score === undefined;
   
-  // 使用有效的 score（正常时用传入的，宕机时用上次保存的）
-  const effectiveScore = isStalled ? lastValidScoreRef.current : score;
-  
-  // score: centipawns（正数白方优势，负数黑方优势）
-  // 转换为白方占比 (0-100)
+  // 计算 whitePercent
   const whitePercent = useMemo(() => {
+    if (score === undefined) {
+      // 宕机时用上次保存的位置
+      return lastValidRef.current.whitePercent;
+    }
     // 使用 sigmoid 函数平滑转换，避免极端值
     // 大约：+200cp ≈ 65%, +500cp ≈ 85%, +1000cp ≈ 95%
-    const normalized = effectiveScore / 100; // 转为 pawns
+    const normalized = score / 100; // 转为 pawns
     const sigmoid = 1 / (1 + Math.exp(-normalized * 0.5));
     return sigmoid * 100;
-  }, [effectiveScore]);
+  }, [score]);
+  
+  // 如果 score 有效，更新保存的值
+  if (score !== undefined) {
+    lastValidRef.current = { whitePercent, score };
+  }
+  
+  // 使用有效的 score（正常时用传入的，宕机时用上次保存的）
+  const effectiveScore = isStalled ? lastValidRef.current.score : score;
 
   // 格式化显示的数值
   const displayScore = useMemo(() => {
