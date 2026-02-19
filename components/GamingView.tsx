@@ -224,41 +224,42 @@ function AnalysisPanel() {
 // EvalBar 组件 - 棋盘右侧的评估条
 // ============================================
 function EvalBar({ score, isFlipped }: { score?: number; isFlipped?: boolean }) {
+  // 保存上一次有效的 score（初始值 30 centipawns，约等于 0.3）
+  const lastValidScoreRef = useRef<number>(30);
+  
+  // 如果 score 有效，更新保存的值
+  if (score !== undefined) {
+    lastValidScoreRef.current = score;
+  }
+  
+  // 是否处于宕机状态（score === undefined）
+  const isStalled = score === undefined;
+  
+  // 使用有效的 score（正常时用传入的，宕机时用上次保存的）
+  const effectiveScore = isStalled ? lastValidScoreRef.current : score;
+  
   // score: centipawns（正数白方优势，负数黑方优势）
   // 转换为白方占比 (0-100)
   const whitePercent = useMemo(() => {
-    if (score === undefined) return 50;
     // 使用 sigmoid 函数平滑转换，避免极端值
     // 大约：+200cp ≈ 65%, +500cp ≈ 85%, +1000cp ≈ 95%
-    const normalized = score / 100; // 转为 pawns
+    const normalized = effectiveScore / 100; // 转为 pawns
     const sigmoid = 1 / (1 + Math.exp(-normalized * 0.5));
     return sigmoid * 100;
-  }, [score]);
+  }, [effectiveScore]);
 
   // 格式化显示的数值
   const displayScore = useMemo(() => {
-    if (score === undefined) return null;
-    const pawns = Math.abs(score) / 100;
+    const pawns = Math.abs(effectiveScore) / 100;
     // 十位数及以上四舍五入取整，避免溢出
     return pawns >= 10 ? Math.round(pawns).toString() : pawns.toFixed(1);
-  }, [score]);
+  }, [effectiveScore]);
 
   // 白方是否占优
-  const whiteAdvantage = (score ?? 0) >= 0;
+  const whiteAdvantage = effectiveScore >= 0;
 
   // 默认：黑在上，白在下
   // Flip：白在上，黑在下
-  
-  // score === undefined 时显示浅黑浅白脉冲动画（AI 思考中）
-  if (score === undefined) {
-    return (
-      <div 
-        className="w-5 rounded-sm overflow-hidden ml-1 bg-zinc-500 animate-pulse" 
-        style={{ height: 500 }}
-      />
-    );
-  }
-  
   return (
     <div 
       className={`w-5 rounded-sm overflow-hidden flex ml-1 relative ${isFlipped ? 'flex-col-reverse' : 'flex-col'}`} 
@@ -266,7 +267,7 @@ function EvalBar({ score, isFlipped }: { score?: number; isFlipped?: boolean }) 
     >
       {/* 黑色区域 */}
       <div 
-        className="bg-zinc-700 transition-all duration-500 ease-out relative"
+        className={`bg-zinc-700 transition-all duration-500 ease-out relative ${isStalled ? 'animate-pulse' : ''}`}
         style={{ height: `${100 - whitePercent}%` }}
       >
         {/* 黑方优势时显示数值：固定在最远离交界处（不翻转时最顶部，翻转时最底部） */}
@@ -278,7 +279,7 @@ function EvalBar({ score, isFlipped }: { score?: number; isFlipped?: boolean }) 
       </div>
       {/* 白色区域 */}
       <div 
-        className="bg-zinc-200 transition-all duration-500 ease-out relative"
+        className={`bg-zinc-200 transition-all duration-500 ease-out relative ${isStalled ? 'animate-pulse' : ''}`}
         style={{ height: `${whitePercent}%` }}
       >
         {/* 白方优势时显示数值：固定在最远离交界处（不翻转时最底部，翻转时最顶部） */}
