@@ -225,31 +225,33 @@ function AnalysisPanel() {
 // ============================================
 function EvalBar({ score, isFlipped }: { score?: number; isFlipped?: boolean }) {
   // 保存上一次有效的 whitePercent 和 score（用于宕机时保持位置）
-  const lastValidRef = useRef<{ whitePercent: number; score: number }>({ whitePercent: 50, score: 0 });
+  // 初始为 null，表示还没有收到过有效 score
+  const lastValidRef = useRef<{ whitePercent: number; score: number } | null>(null);
   
   // 是否处于宕机状态（score === undefined）
   const isStalled = score === undefined;
   
-  // 计算 whitePercent
-  const whitePercent = useMemo(() => {
-    if (score === undefined) {
-      // 宕机时用上次保存的位置
-      return lastValidRef.current.whitePercent;
-    }
-    // 使用 sigmoid 函数平滑转换，避免极端值
-    // 大约：+200cp ≈ 65%, +500cp ≈ 85%, +1000cp ≈ 95%
+  // 计算当前的 whitePercent（直接计算，不用 useMemo）
+  let whitePercent: number;
+  let effectiveScore: number;
+  
+  if (score !== undefined) {
+    // score 有效：计算新的 whitePercent 并更新 ref
     const normalized = score / 100; // 转为 pawns
     const sigmoid = 1 / (1 + Math.exp(-normalized * 0.5));
-    return sigmoid * 100;
-  }, [score]);
-  
-  // 如果 score 有效，更新保存的值
-  if (score !== undefined) {
+    whitePercent = sigmoid * 100;
+    effectiveScore = score;
+    // 更新 ref（下次 undefined 时使用）
     lastValidRef.current = { whitePercent, score };
+  } else if (lastValidRef.current !== null) {
+    // score undefined 但有历史记录：使用上次保存的值
+    whitePercent = lastValidRef.current.whitePercent;
+    effectiveScore = lastValidRef.current.score;
+  } else {
+    // score undefined 且没有历史记录：使用中间值
+    whitePercent = 50;
+    effectiveScore = 0;
   }
-  
-  // 使用有效的 score（正常时用传入的，宕机时用上次保存的）
-  const effectiveScore = isStalled ? lastValidRef.current.score : score;
 
   // 格式化显示的数值
   const displayScore = useMemo(() => {

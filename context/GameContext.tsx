@@ -58,7 +58,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, phase: action.phase };
 
     case 'SET_FEN':
-      return { ...state, fen: action.fen };
+      // 当 FEN 变化时，清除旧的分析数据（避免 stale data 导致 EvalBar 跳变）
+      return { ...state, fen: action.fen, analysis: null };
 
     case 'SET_TURN':
       return { ...state, turn: action.turn };
