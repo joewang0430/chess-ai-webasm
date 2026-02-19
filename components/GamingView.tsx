@@ -257,9 +257,9 @@ function EvalBar({ score, isFlipped }: { score?: number; isFlipped?: boolean }) 
         className="bg-zinc-700 transition-all duration-500 ease-out relative"
         style={{ height: `${100 - whitePercent}%` }}
       >
-        {/* 黑方优势时显示数值：不翻转时在底部(交界处)，翻转时在顶部(交界处) */}
+        {/* 黑方优势时显示数值：固定在最远离交界处（不翻转时最顶部，翻转时最底部） */}
         {displayScore && !whiteAdvantage && (
-          <span className={`absolute left-1/2 -translate-x-1/2 text-[10px] font-medium text-zinc-200 ${isFlipped ? 'top-1' : 'bottom-1'}`}>
+          <span className={`absolute left-1/2 -translate-x-1/2 text-[10px] font-medium text-zinc-200 ${isFlipped ? 'bottom-1' : 'top-1'}`}>
             {displayScore}
           </span>
         )}
@@ -269,9 +269,9 @@ function EvalBar({ score, isFlipped }: { score?: number; isFlipped?: boolean }) 
         className="bg-zinc-200 transition-all duration-500 ease-out relative"
         style={{ height: `${whitePercent}%` }}
       >
-        {/* 白方优势时显示数值：不翻转时在顶部(交界处)，翻转时在底部(交界处) */}
+        {/* 白方优势时显示数值：固定在最远离交界处（不翻转时最底部，翻转时最顶部） */}
         {displayScore && whiteAdvantage && (
-          <span className={`absolute left-1/2 -translate-x-1/2 text-[10px] font-medium text-zinc-700 ${isFlipped ? 'bottom-1' : 'top-1'}`}>
+          <span className={`absolute left-1/2 -translate-x-1/2 text-[10px] font-medium text-zinc-700 ${isFlipped ? 'top-1' : 'bottom-1'}`}>
             {displayScore}
           </span>
         )}
