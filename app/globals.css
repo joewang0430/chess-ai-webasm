@@ -46,3 +46,17 @@ body {
 ::-webkit-scrollbar-thumb:active {
   background: #8a8a8a;
 }
+
+/* EvalBar 思考中动画 */
+@keyframes evalbar-thinking {
+  0%, 100% {
+    background-color: #a1a1aa; /* zinc-400 */
+  }
+  50% {
+    background-color: #52525b; /* zinc-600 */
+  }
+}
+
+.animate-evalbar-thinking {
+  animation: evalbar-thinking 1.5s ease-in-out infinite;
+}

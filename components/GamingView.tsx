@@ -249,11 +249,11 @@ function EvalBar({ score, isFlipped }: { score?: number; isFlipped?: boolean }) 
   // 默认：黑在上，白在下
   // Flip：白在上，黑在下
   
-  // score === undefined 时显示红色（debug 用）
+  // score === undefined 时显示浅黑浅白脉冲动画（AI 思考中）
   if (score === undefined) {
     return (
       <div 
-        className="w-5 rounded-sm overflow-hidden ml-1 bg-red-500" 
+        className="w-5 rounded-sm overflow-hidden ml-1 bg-zinc-500 animate-pulse" 
         style={{ height: 500 }}
       />
     );
