@@ -767,12 +767,15 @@ export default function GamingView() {
               {/* EvalBar: 仅在分析模式下显示 */}
               {state.isAnalysisMode && (
                 <EvalBar 
-                  score={
-                    // AI 思考时分析不运行，用 currentEval；否则用分析数据
-                    state.isAIThinking && currentEval !== null
-                      ? (state.turn === 'w' ? currentEval : -currentEval) // 转为白方视角
-                      : state.analysis?.topMoves[0]?.score
-                  } 
+                  score={(() => {
+                    // 获取原始评分（当前走棋方视角）
+                    const rawScore = state.isAIThinking && currentEval !== null
+                      ? currentEval
+                      : state.analysis?.topMoves[0]?.score;
+                    if (rawScore === undefined) return undefined;
+                    // 统一转换为白方视角
+                    return state.turn === 'w' ? rawScore : -rawScore;
+                  })()} 
                   isFlipped={state.settings.boardFlipped} 
                 />
               )}
