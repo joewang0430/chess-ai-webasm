@@ -508,11 +508,13 @@ export default function GamingView() {
     pvBestMove,
     isSearching, 
     analysisData,
+    currentEval,
     isReady,
     evaluatePosition, 
     stopSearch,
     setDepth,
     setAnalysisMode,
+    clearCurrentEval,
   } = useStockfish({
     depth: currentAIDepth,
     analysisMode: state.isAnalysisMode,
@@ -608,6 +610,7 @@ export default function GamingView() {
 
           makeMove(moveRecord);
           setAIThinking(false);
+          clearCurrentEval(); // AI 走完后清除实时评估
 
           // 检查游戏是否结束
           checkGameOver(chess);
@@ -615,6 +618,7 @@ export default function GamingView() {
       } catch (e) {
         console.error('AI move error:', e);
         setAIThinking(false);
+        clearCurrentEval();
       }
     };
 
@@ -759,9 +763,15 @@ export default function GamingView() {
             <ChessBoard />
             {/* Bar 区域：始终占 24px，保持右侧面板位置稳定 */}
             <div className="w-6 flex-shrink-0">
+              {/* EvalBar: 仅在分析模式下显示 */}
               {state.isAnalysisMode && (
                 <EvalBar 
-                  score={state.analysis?.topMoves[0]?.score} 
+                  score={
+                    // AI 思考时分析不运行，用 currentEval；否则用分析数据
+                    state.isAIThinking && currentEval !== null
+                      ? (state.turn === 'w' ? currentEval : -currentEval) // 转为白方视角
+                      : state.analysis?.topMoves[0]?.score
+                  } 
                   isFlipped={state.settings.boardFlipped} 
                 />
               )}

@@ -25,6 +25,8 @@ interface StockfishHook {
   isSearching: boolean;
   /** 分析数据 (仅分析模式下有效) */
   analysisData: AnalysisData | null;
+  /** 当前实时评估分数 (centipawns, 当前走棋方视角) */
+  currentEval: number | null;
   /** 引擎是否已就绪 */
   isReady: boolean;
   /** 让 AI 分析指定局面 */
@@ -37,6 +39,8 @@ interface StockfishHook {
   setDepth: (depth: number) => void;
   /** 动态切换分析模式 */
   setAnalysisMode: (enabled: boolean) => void;
+  /** 清除当前实时评估 (AI 走完后调用) */
+  clearCurrentEval: () => void;
 }
 
 // ============================================
@@ -125,6 +129,7 @@ export function useStockfish({
   const [isSearching, setIsSearching] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
+  const [currentEval, setCurrentEval] = useState<number | null>(null);
   
   // 配置 Refs (用于在回调中访问最新值)
   const depthRef = useRef(depth);
@@ -198,6 +203,12 @@ export function useStockfish({
         if (info.multipv === 1 && info.move) {
           setPvBestMove(info.move);
         }
+        
+        // 非分析模式下，更新实时评估分数 (用于 AI 思考时的 EvalBar)
+        // 注意：此 score 是当前走棋方视角
+        if (!analysisModeRef.current && info.score !== undefined) {
+          setCurrentEval(info.score);
+        }
       }
 
       // --- 解析 bestmove ---
@@ -207,6 +218,9 @@ export function useStockfish({
           setBestMove(move);
         }
         setIsSearching(false);
+        
+        // AI 搜索完成后清除实时评估 (保留最后一次的值直到下次搜索)
+        // 注意：不在这里清除 currentEval，让 GamingView 在 AI 走完后清除
         
         // 分析完成：发布最终 TopN（isAnalyzing=false）
         if (analysisModeRef.current) {
@@ -314,16 +328,23 @@ export function useStockfish({
     }
   }, []);
 
+  /** 清除当前实时评估 */
+  const clearCurrentEval = useCallback(() => {
+    setCurrentEval(null);
+  }, []);
+
   return {
     bestMove,
     pvBestMove,
     isSearching,
     analysisData,
+    currentEval,
     isReady,
     evaluatePosition,
     stopSearch,
     resetEngine,
     setDepth,
     setAnalysisMode: setAnalysisModeHook,
+    clearCurrentEval,
   };
 }
