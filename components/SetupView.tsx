@@ -328,7 +328,7 @@ export default function SetupView() {
         </h1>
 
         {/* 主布局 - 使用 Grid 确保上下列对齐 */}
-        <div className="grid grid-cols-[192px_1fr_320px] gap-6">
+        <div className="grid grid-cols-[192px_500px_320px] gap-6">
           {/* ========== Row 1: 主要内容 ========== */}
           
           {/* 左列: 捕获棋子 + 走棋历史 */}
@@ -345,7 +345,7 @@ export default function SetupView() {
           </div>
 
           {/* 中列: 棋盘 */}
-          <div className="flex justify-center">
+          <div>
             <ChessBoard />
           </div>
 
@@ -437,8 +437,8 @@ export default function SetupView() {
           </div>
 
           {/* 中列: 棋盘操作按钮 */}
-          <div className="flex items-center justify-center pt-4">
-            <div className="w-[500px] flex items-center justify-between">
+          <div className="pt-4">
+            <div className="flex items-center justify-between">
               <button
                 onClick={toggleCustomizing}
                 className={`flex-1 px-2 py-2 rounded border transition whitespace-nowrap ${
