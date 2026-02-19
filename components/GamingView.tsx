@@ -221,6 +221,40 @@ function AnalysisPanel() {
 }
 
 // ============================================
+// EvalBar 组件 - 棋盘右侧的评估条
+// ============================================
+function EvalBar({ score, isFlipped }: { score?: number; isFlipped?: boolean }) {
+  // score: centipawns（正数白方优势，负数黑方优势）
+  // 转换为白方占比 (0-100)
+  const whitePercent = useMemo(() => {
+    if (score === undefined) return 50;
+    // 使用 sigmoid 函数平滑转换，避免极端值
+    // 大约：+200cp ≈ 65%, +500cp ≈ 85%, +1000cp ≈ 95%
+    const normalized = score / 100; // 转为 pawns
+    const sigmoid = 1 / (1 + Math.exp(-normalized * 0.5));
+    return sigmoid * 100;
+  }, [score]);
+
+  // 如果棋盘翻转，bar 也要翻转（白在上变成白在下）
+  const displayWhitePercent = isFlipped ? (100 - whitePercent) : whitePercent;
+
+  return (
+    <div className="w-3 rounded-sm overflow-hidden flex flex-col ml-1" style={{ height: 500 }}>
+      {/* 黑色区域（顶部） */}
+      <div 
+        className="bg-zinc-700 transition-all duration-500 ease-out"
+        style={{ height: `${100 - displayWhitePercent}%` }}
+      />
+      {/* 白色区域（底部） */}
+      <div 
+        className="bg-zinc-200 transition-all duration-500 ease-out"
+        style={{ height: `${displayWhitePercent}%` }}
+      />
+    </div>
+  );
+}
+
+// ============================================
 // 主组件: GamingView
 // ============================================
 
@@ -685,7 +719,7 @@ export default function GamingView() {
         )}
 
         {/* 主布局 - 使用 Grid 确保上下列对齐 */}
-        <div className="grid grid-cols-[192px_500px_320px] gap-6">
+        <div className={`grid gap-6 ${state.isAnalysisMode ? 'grid-cols-[192px_516px_320px]' : 'grid-cols-[192px_500px_320px]'}`}>
           {/* ========== Row 1: 主要内容 ========== */}
           
           {/* 左列: 捕获棋子 + 走棋历史 */}
@@ -694,9 +728,15 @@ export default function GamingView() {
             <MoveHistoryPanel />
           </div>
 
-          {/* 中列: 棋盘 */}
-          <div>
+          {/* 中列: 棋盘 + Eval Bar (Analysis Mode 时显示) */}
+          <div className="flex">
             <ChessBoard />
+            {state.isAnalysisMode && (
+              <EvalBar 
+                score={analysisData?.topMoves[0]?.score} 
+                isFlipped={state.settings.boardFlipped} 
+              />
+            )}
           </div>
 
           {/* 右列: 配置面板 */}
