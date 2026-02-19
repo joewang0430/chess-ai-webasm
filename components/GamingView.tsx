@@ -235,23 +235,47 @@ function EvalBar({ score, isFlipped }: { score?: number; isFlipped?: boolean }) 
     return sigmoid * 100;
   }, [score]);
 
+  // 格式化显示的数值
+  const displayScore = useMemo(() => {
+    if (score === undefined) return null;
+    const pawns = Math.abs(score) / 100;
+    return pawns.toFixed(1);
+  }, [score]);
+
+  // 白方是否占优
+  const whiteAdvantage = (score ?? 0) >= 0;
+
   // 默认：黑在上，白在下
   // Flip：白在上，黑在下
   return (
     <div 
-      className={`w-3 rounded-sm overflow-hidden flex ${isFlipped ? 'flex-col-reverse' : 'flex-col'}`} 
+      className={`w-5 rounded-sm overflow-hidden flex ml-1 relative ${isFlipped ? 'flex-col-reverse' : 'flex-col'}`} 
       style={{ height: 500 }}
     >
       {/* 黑色区域 */}
       <div 
-        className="bg-zinc-700 transition-all duration-500 ease-out"
+        className="bg-zinc-700 transition-all duration-500 ease-out relative"
         style={{ height: `${100 - whitePercent}%` }}
-      />
+      >
+        {/* 黑方优势时显示数值 */}
+        {displayScore && !whiteAdvantage && (
+          <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[10px] font-medium text-zinc-200">
+            {displayScore}
+          </span>
+        )}
+      </div>
       {/* 白色区域 */}
       <div 
-        className="bg-zinc-200 transition-all duration-500 ease-out"
+        className="bg-zinc-200 transition-all duration-500 ease-out relative"
         style={{ height: `${whitePercent}%` }}
-      />
+      >
+        {/* 白方优势时显示数值 */}
+        {displayScore && whiteAdvantage && (
+          <span className="absolute top-1 left-1/2 -translate-x-1/2 text-[10px] font-medium text-zinc-700">
+            {displayScore}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -721,7 +745,7 @@ export default function GamingView() {
         )}
 
         {/* 主布局 - 使用 Grid 确保上下列对齐 */}
-        <div className="grid grid-cols-[192px_516px_320px] gap-6">
+        <div className="grid grid-cols-[192px_524px_320px] gap-6">
           {/* ========== Row 1: 主要内容 ========== */}
           
           {/* 左列: 捕获棋子 + 走棋历史 */}
@@ -733,11 +757,11 @@ export default function GamingView() {
           {/* 中列: 棋盘 + Eval Bar 区域 (始终预留空间) */}
           <div className="flex">
             <ChessBoard />
-            {/* Bar 区域：始终占 16px，保持右侧面板位置稳定 */}
-            <div className="w-4 ml-1 flex-shrink-0">
+            {/* Bar 区域：始终占 24px，保持右侧面板位置稳定 */}
+            <div className="w-6 flex-shrink-0">
               {state.isAnalysisMode && (
                 <EvalBar 
-                  score={analysisData?.topMoves[0]?.score} 
+                  score={state.analysis?.topMoves[0]?.score} 
                   isFlipped={state.settings.boardFlipped} 
                 />
               )}
