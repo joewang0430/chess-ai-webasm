@@ -248,6 +248,17 @@ function EvalBar({ score, isFlipped }: { score?: number; isFlipped?: boolean }) 
 
   // 默认：黑在上，白在下
   // Flip：白在上，黑在下
+  
+  // score === undefined 时显示红色（debug 用）
+  if (score === undefined) {
+    return (
+      <div 
+        className="w-5 rounded-sm overflow-hidden ml-1 bg-red-500" 
+        style={{ height: 500 }}
+      />
+    );
+  }
+  
   return (
     <div 
       className={`w-5 rounded-sm overflow-hidden flex ml-1 relative ${isFlipped ? 'flex-col-reverse' : 'flex-col'}`} 
