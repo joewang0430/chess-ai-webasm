@@ -334,16 +334,12 @@ export default function SetupView() {
           {/* 左列: 捕获棋子 + 走棋历史 */}
           <div className="flex flex-col h-[500px]">
             <CapturedPiecesPanel />
-            <div className="bg-[#2a2a2a] rounded-lg p-4 flex-1 overflow-y-auto">
-              <h3 className="text-gray-400 mb-4">Move History</h3>
-              <div className="text-sm text-gray-500">
-                {state.moveHistory.length === 0 ? (
-                  <span>No moves yet</span>
-                ) : (
-                  state.moveHistory.map((move, i) => (
-                    <div key={i}>{i + 1}. {move.san}</div>
-                  ))
-                )}
+            <div className="bg-[#2a2a2a] rounded-lg flex-1 flex flex-col overflow-hidden">
+              <h3 className="text-gray-400 text-sm text-center py-2 shrink-0">Move History</h3>
+              <div className="text-sm text-gray-500 px-4 pb-4 flex-1 overflow-y-auto">
+                {state.moveHistory.map((move, i) => (
+                  <div key={i}>{i + 1}. {move.san}</div>
+                ))}
               </div>
             </div>
           </div>

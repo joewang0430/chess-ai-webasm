@@ -347,6 +347,14 @@ function CapturedPiecesPanel() {
 function MoveHistoryPanel() {
   const { state, setViewingMoveIndex } = useGame();
   const viewingIndex = state.viewingMoveIndex;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // 当 moveHistory 变化时自动滚动到底部
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [state.moveHistory.length]);
   
   // 点击走法预览
   const handleMoveClick = (moveIndex: number) => {
@@ -361,10 +369,8 @@ function MoveHistoryPanel() {
   return (
     <div className="bg-[#2a2a2a] rounded-lg flex-1 flex flex-col overflow-hidden">
       <h3 className="text-gray-400 text-sm text-center py-2 shrink-0">Move History</h3>
-      <div className="text-sm space-y-1 px-4 pb-4 flex-1 overflow-y-auto">
-        {state.moveHistory.length === 0 ? (
-          <span className="text-gray-500">No moves yet</span>
-        ) : (
+      <div ref={scrollRef} className="text-sm space-y-1 px-4 pb-4 flex-1 overflow-y-auto">
+        {state.moveHistory.length > 0 && (
           // 按回合分组：每两步为一回合
           Array.from({ length: Math.ceil(state.moveHistory.length / 2) }, (_, i) => {
             const whiteMoveIndex = i * 2;
@@ -378,7 +384,7 @@ function MoveHistoryPanel() {
                 {/* 白方走法 */}
                 <button
                   onClick={() => handleMoveClick(whiteMoveIndex)}
-                  className={`w-14 text-left rounded px-1 transition ${
+                  className={`w-14 text-left rounded-sm px-1 transition ${
                     viewingIndex === whiteMoveIndex
                       ? 'bg-yellow-500 text-black'
                       : 'text-white hover:bg-[#3a3a3a]'
@@ -390,7 +396,7 @@ function MoveHistoryPanel() {
                 {blackMove && (
                   <button
                     onClick={() => handleMoveClick(blackMoveIndex)}
-                    className={`w-14 text-left rounded px-1 transition ${
+                    className={`w-14 text-left rounded-sm px-1 transition ${
                       viewingIndex === blackMoveIndex
                         ? 'bg-yellow-500 text-black'
                         : 'text-white hover:bg-[#3a3a3a]'
