@@ -111,7 +111,7 @@ function PlayerPanel({ color, label, isCurrentTurn }: PlayerPanelProps) {
         <select
           value={player.type}
           onChange={(e) => setPlayerType(color, e.target.value as PlayerType)}
-          className="bg-[#3a3a3a] text-white text-sm px-2 py-1 rounded border border-gray-600 focus:outline-none focus:border-yellow-500"
+          className="bg-[#3a3a3a] text-white text-sm px-2 py-1 rounded border border-gray-600 focus:outline-none focus:border-yellow-500 w-40"
         >
           <option value="player">Human</option>
           <option value="stockfish">Stockfish 17.1</option>
@@ -239,7 +239,8 @@ function EvalBar({ score, isFlipped }: { score?: number; isFlipped?: boolean }) 
   const displayScore = useMemo(() => {
     if (score === undefined) return null;
     const pawns = Math.abs(score) / 100;
-    return pawns.toFixed(1);
+    // 十位数及以上四舍五入取整，避免溢出
+    return pawns >= 10 ? Math.round(pawns).toString() : pawns.toFixed(1);
   }, [score]);
 
   // 白方是否占优
