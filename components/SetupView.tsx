@@ -605,7 +605,7 @@ export default function SetupView() {
 
           {/* 中列: 棋盘操作按钮 */}
           <div className="pt-4">
-            <div className="flex items-center gap-3">
+            <div className="w-[500px] flex items-center gap-3">
               <button
                 onClick={toggleCustomizing}
                 className={`flex-1 px-2 py-2 rounded-lg border transition whitespace-nowrap ${
