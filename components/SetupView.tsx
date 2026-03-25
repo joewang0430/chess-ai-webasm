@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
 import { useGame } from '@/context/GameContext';
-import { PieceColor, PlayerType, DEFAULT_TIME, MIN_DEPTH, MAX_DEPTH, ANALYSIS_DEPTH, ANALYSIS_MULTI_PV } from '@/types/game';
+import { PieceColor, PlayerType, MIN_DEPTH, MAX_DEPTH, ANALYSIS_DEPTH, ANALYSIS_MULTI_PV, INITIAL_FEN } from '@/types/game';
 import { useStockfish } from '@/hooks/useStockfish';
 import ChessBoard from './ChessBoard';
 
@@ -25,6 +25,93 @@ const PIECE_VALUES: Record<string, number> = {
 const STARTING_PIECES = {
   p: 8, n: 2, b: 2, r: 2, q: 1,
 };
+
+const FILES = 'abcdefgh';
+
+function editorIndexToSquare(row: number, col: number, flipped: boolean): string {
+  const actualRow = flipped ? row : 7 - row;
+  const actualCol = flipped ? 7 - col : col;
+  return `${FILES[actualCol]}${actualRow + 1}`;
+}
+
+function squareToEditorIndex(square: string): { row: number; col: number } {
+  const file = square[0];
+  const rank = parseInt(square[1]);
+  const col = FILES.indexOf(file);
+  const row = 8 - rank;
+  return { row, col };
+}
+
+function fenBoardToMatrix(boardPart: string): (string | null)[][] {
+  const rows = boardPart.split('/');
+  if (rows.length !== 8) {
+    return Array.from({ length: 8 }, () => Array.from({ length: 8 }, () => null));
+  }
+
+  return rows.map((row) => {
+    const cells: (string | null)[] = [];
+    for (const char of row) {
+      if (/\d/.test(char)) {
+        const count = parseInt(char);
+        for (let i = 0; i < count; i++) cells.push(null);
+      } else {
+        cells.push(char);
+      }
+    }
+    while (cells.length < 8) cells.push(null);
+    return cells.slice(0, 8);
+  });
+}
+
+function matrixToFenBoard(matrix: (string | null)[][]): string {
+  return matrix
+    .map((row) => {
+      let result = '';
+      let empty = 0;
+      for (const cell of row) {
+        if (!cell) {
+          empty++;
+        } else {
+          if (empty > 0) {
+            result += String(empty);
+            empty = 0;
+          }
+          result += cell;
+        }
+      }
+      if (empty > 0) result += String(empty);
+      return result;
+    })
+    .join('/');
+}
+
+function setFenTurn(fen: string, turn: PieceColor): string {
+  const parts = fen.trim().split(/\s+/);
+  while (parts.length < 6) {
+    if (parts.length === 1) parts.push('w');
+    else if (parts.length === 2) parts.push('-');
+    else if (parts.length === 3) parts.push('-');
+    else if (parts.length === 4) parts.push('0');
+    else if (parts.length === 5) parts.push('1');
+  }
+  parts[1] = turn;
+  return parts.slice(0, 6).join(' ');
+}
+
+function setFenPiece(fen: string, square: string, piece: string | null): string {
+  const parts = fen.trim().split(/\s+/);
+  const boardPart = parts[0] || '8/8/8/8/8/8/8/8';
+  const matrix = fenBoardToMatrix(boardPart);
+  const { row, col } = squareToEditorIndex(square);
+
+  if (row >= 0 && row < 8 && col >= 0 && col < 8) {
+    matrix[row][col] = piece;
+  }
+
+  const nextBoard = matrixToFenBoard(matrix);
+  const nextFenBase = [nextBoard, parts[1] || 'w', '-', '-', '0', '1'];
+  return nextFenBase.join(' ');
+}
 
 // ============================================
 // 时间格式化
@@ -402,7 +489,7 @@ function SetupEvalBar({ score, isFlipped }: { score?: number; isFlipped?: boolea
 // 主组件: SetupView
 // ============================================
 export default function SetupView() {
-  const { state, startGame, setFen, toggleCustomizing, toggleAnalysisMode, dispatch, isHydrated, setAnalysisData } = useGame();
+  const { state, startGame, setFen, toggleAnalysisMode, dispatch, isHydrated, setAnalysisData } = useGame();
 
   const displayedTurn = useMemo(() => state.fen.split(' ')[1] as PieceColor, [state.fen]);
 
@@ -418,6 +505,28 @@ export default function SetupView() {
     analysisMode: state.isAnalysisMode,
   });
 
+  const [setupSlots, setSetupSlots] = useState<string[]>(() =>
+    Array.from({ length: 6 }, () => INITIAL_FEN)
+  );
+  const [activeSetupSlot, setActiveSetupSlot] = useState(0);
+  const [selectedEditorPiece, setSelectedEditorPiece] = useState<string>('P');
+  const [setupFenInput, setSetupFenInput] = useState('');
+  const [setupFenError, setSetupFenError] = useState('');
+
+  const activeSetupFen = setupSlots[activeSetupSlot];
+  const isSetupBoardModalOpen = state.isCustomizing;
+  const isBothSidesAI = state.white.type === 'stockfish' && state.black.type === 'stockfish';
+  const analysisTargetFen = isSetupBoardModalOpen ? activeSetupFen : state.fen;
+
+  const updateActiveSetupFen = (nextFen: string) => {
+    setSetupSlots((prev) => prev.map((fen, idx) => (idx === activeSetupSlot ? nextFen : fen)));
+  };
+
+  useEffect(() => {
+    setSetupFenInput('');
+    setSetupFenError('');
+  }, [activeSetupFen]);
+
   useEffect(() => {
     if (state.isAnalysisMode && analysisData) {
       setAnalysisData(analysisData);
@@ -426,18 +535,24 @@ export default function SetupView() {
 
   useEffect(() => {
     if (state.isAnalysisMode && isReady) {
-      const targetFen = state.fen;
+      const targetFen = analysisTargetFen;
       stopSearch();
       setAnalysisData(null);
       setDepth(ANALYSIS_DEPTH);
       setAnalysisMode(true);
-      evaluatePosition(targetFen);
+
+      try {
+        new Chess(targetFen);
+        evaluatePosition(targetFen);
+      } catch {
+        // 忽略无效局面，不打断 UI
+      }
     } else {
       stopSearch();
       setAnalysisMode(false);
       setAnalysisData(null);
     }
-  }, [state.isAnalysisMode, state.fen, isReady, stopSearch, setAnalysisData, setDepth, setAnalysisMode, evaluatePosition]);
+  }, [state.isAnalysisMode, analysisTargetFen, isReady, stopSearch, setAnalysisData, setDepth, setAnalysisMode, evaluatePosition]);
 
   // 时间选项 (分钟, 0 表示不计时)
   const timeOptions = [1, 3, 5, 10, 15, 30, 60, 120, 0];
@@ -474,9 +589,7 @@ export default function SetupView() {
     <div className="min-h-screen p-6">
       <div className="max-w-6xl mx-auto">
         {/* 标题 */}
-        <h1 className="text-2xl font-bold mb-6 text-gray-400">
-          Setup Page {state.isCustomizing && '-- customized'}
-        </h1>
+        <h1 className="text-2xl font-bold mb-6 text-gray-400">Setup Page</h1>
 
         {/* 主布局 - 使用 Grid 确保上下列对齐 */}
         <div className="grid grid-cols-[192px_524px_320px] gap-6">
@@ -499,7 +612,7 @@ export default function SetupView() {
           <div className="flex">
             <ChessBoard />
             <div className="w-6 flex-shrink-0">
-              {state.isAnalysisMode && (
+              {state.isAnalysisMode && !isBothSidesAI && (
                 <SetupEvalBar
                   score={(() => {
                     const rawScore = state.analysis?.topMoves[0]?.score;
@@ -521,7 +634,7 @@ export default function SetupView() {
 
             {/* 中间：分析面板 / 时间设置（Analysis 开启时用分析替换时间设置） */}
             <div className="my-3">
-              {state.isAnalysisMode ? (
+              {state.isAnalysisMode && !isBothSidesAI ? (
                 <SetupAnalysisPanel />
               ) : (
                 <div className="bg-[#2a2a2a] rounded-lg p-4 space-y-3">
@@ -538,36 +651,6 @@ export default function SetupView() {
                     </select>
                   </div>
 
-                  {/* 自定义棋盘时的先手选择 */}
-                  {state.isCustomizing && (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-400">Board is customized:</span>
-                        <select
-                          value={state.turn}
-                          onChange={(e) => {
-                            const newFen = state.fen.replace(
-                              / [wb] /,
-                              ` ${e.target.value} `
-                            );
-                            setFen(newFen);
-                          }}
-                          className="bg-[#3a3a3a] text-white px-3 py-1.5 rounded border border-gray-600 focus:outline-none focus:border-yellow-500"
-                        >
-                          <option value="w">White</option>
-                          <option value="b">Black</option>
-                        </select>
-                        <span className="text-gray-400">plays first.</span>
-                      </div>
-
-                      <button
-                        onClick={handleResetBoard}
-                        className="text-gray-400 underline hover:text-white transition"
-                      >
-                        Reset to classic board
-                      </button>
-                    </>
-                  )}
                 </div>
               )}
             </div>
@@ -607,12 +690,8 @@ export default function SetupView() {
           <div className="pt-4">
             <div className="w-[500px] flex items-center gap-3">
               <button
-                onClick={toggleCustomizing}
-                className={`flex-1 px-2 py-2 rounded-lg border transition whitespace-nowrap ${
-                  state.isCustomizing 
-                    ? 'border-yellow-500 text-yellow-500 hover:border-yellow-400 hover:text-yellow-400' 
-                    : 'border-gray-600 text-gray-300 hover:text-white hover:border-gray-400'
-                }`}
+                onClick={() => dispatch({ type: 'SET_CUSTOMIZING', enabled: true })}
+                className="flex-1 px-2 py-2 rounded-lg border transition whitespace-nowrap border-gray-600 text-gray-300 hover:text-white hover:border-gray-400"
               >
                 Setup Board
               </button>
@@ -657,6 +736,268 @@ export default function SetupView() {
           </div>
         </div>
       </div>
+
+      {isSetupBoardModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6 md:p-8">
+          <div className="w-full max-w-[1080px] max-h-[90vh] overflow-auto bg-[#1f1f1f] rounded-2xl border border-zinc-700 p-5 md:p-6 relative">
+            <button
+              onClick={() => dispatch({ type: 'SET_CUSTOMIZING', enabled: false })}
+              className="absolute left-4 top-4 w-10 h-10 rounded-full bg-zinc-200 text-black text-3xl leading-none flex items-center justify-center hover:bg-white transition"
+              aria-label="Close Setup Board"
+            >
+              ×
+            </button>
+
+            <div className="grid grid-cols-[100px_420px_minmax(0,1fr)] gap-5 items-start pt-8">
+              <div className="grid grid-rows-[56px_420px_56px] h-[532px]">
+                <div />
+                <div className="h-[420px] flex flex-col justify-between">
+                  {Array.from({ length: 6 }, (_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setActiveSetupSlot(idx);
+                        setSetupFenError('');
+                      }}
+                      className={`w-full py-2.5 rounded-xl border-2 text-lg transition ${
+                        activeSetupSlot === idx
+                          ? 'border-yellow-400 text-zinc-100 bg-zinc-700/50'
+                          : 'border-zinc-500 text-zinc-200 bg-zinc-800/50 hover:bg-zinc-700/60'
+                      }`}
+                    >
+                      Setting {idx + 1}
+                    </button>
+                  ))}
+                </div>
+                <div />
+              </div>
+
+              <div className="grid grid-rows-[56px_420px_56px] h-[532px]">
+                <div className="flex justify-center items-center">
+                  <div className="flex gap-1 bg-[#2a2a2a] px-3 py-2 rounded-lg border border-zinc-600 shadow-sm">
+                    {['k', 'q', 'r', 'b', 'n', 'p'].map((piece) => {
+                      const symbol = PIECE_EMOJIS[piece];
+                      const isSelected = selectedEditorPiece === piece;
+                      return (
+                        <button
+                          key={piece}
+                          onClick={() => setSelectedEditorPiece(piece)}
+                          className={`w-9 h-9 text-3xl leading-none flex items-center justify-center rounded-md transition ${isSelected ? 'bg-yellow-400/25 ring-1 ring-yellow-400 text-yellow-200' : 'text-zinc-100 hover:bg-zinc-700'}`}
+                        >
+                          {symbol}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-8 rounded-lg overflow-hidden shadow-2xl" style={{ width: '420px', height: '420px' }}>
+                  {Array.from({ length: 8 }, (_, row) =>
+                    Array.from({ length: 8 }, (_, col) => {
+                      const square = editorIndexToSquare(row, col, state.settings.boardFlipped);
+                      const boardPart = activeSetupFen.split(' ')[0] || '8/8/8/8/8/8/8/8';
+                      const matrix = fenBoardToMatrix(boardPart);
+                      const { row: boardRow, col: boardCol } = squareToEditorIndex(square);
+                      const piece = matrix[boardRow]?.[boardCol] || null;
+                      const isLight = (row + col) % 2 === 1;
+                      const bgColor = isLight ? '#eeeed2' : '#769656';
+
+                      return (
+                        <button
+                          key={`${row}-${col}`}
+                          onClick={() => {
+                            setSetupFenError('');
+                            const nextFen = selectedEditorPiece === 'empty'
+                              ? setFenPiece(activeSetupFen, square, null)
+                              : setFenPiece(activeSetupFen, square, selectedEditorPiece);
+                            updateActiveSetupFen(nextFen);
+                          }}
+                          className="relative w-full aspect-square flex items-center justify-center overflow-hidden"
+                          style={{ background: bgColor }}
+                        >
+                          {piece && (
+                            <span className="text-[3.2rem] leading-none select-none" style={{ textShadow: piece === piece.toUpperCase() ? '0 1px 2px rgba(0,0,0,0.5)' : '0 1px 1px rgba(255,255,255,0.3)' }}>
+                              {PIECE_EMOJIS[piece]}
+                            </span>
+                          )}
+                          {col === 0 && (
+                            <span className="absolute top-1 left-1 text-xs font-bold" style={{ color: isLight ? '#769656' : '#eeeed2' }}>
+                              {state.settings.boardFlipped ? row + 1 : 8 - row}
+                            </span>
+                          )}
+                          {row === 7 && (
+                            <span className="absolute bottom-1 right-1 text-xs font-bold" style={{ color: isLight ? '#769656' : '#eeeed2' }}>
+                              {state.settings.boardFlipped ? 'hgfedcba'[col] : 'abcdefgh'[col]}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+
+                <div className="flex justify-center items-center">
+                  <div className="flex gap-1 bg-[#2a2a2a] px-3 py-2 rounded-lg border border-zinc-600 items-center shadow-sm">
+                    {['K', 'Q', 'R', 'B', 'N', 'P'].map((piece) => {
+                      const symbol = PIECE_EMOJIS[piece];
+                      const isSelected = selectedEditorPiece === piece;
+                      return (
+                        <button
+                          key={piece}
+                          onClick={() => setSelectedEditorPiece(piece)}
+                          className={`w-9 h-9 text-3xl leading-none flex items-center justify-center rounded-md transition ${isSelected ? 'bg-yellow-400/25 ring-1 ring-yellow-400 text-yellow-200' : 'text-zinc-100 hover:bg-zinc-700'}`}
+                        >
+                          {symbol}
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => setSelectedEditorPiece('empty')}
+                      className={`ml-2 px-3 h-10 text-sm rounded-md border transition ${selectedEditorPiece === 'empty' ? 'bg-yellow-400/25 border-yellow-400 text-yellow-200' : 'border-zinc-500 text-zinc-200 hover:bg-zinc-700'}`}
+                    >
+                      Empty
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 flex flex-col min-h-[560px]">
+                <div className="flex gap-4 mb-6">
+                  <button
+                    onClick={() => {
+                      updateActiveSetupFen(INITIAL_FEN);
+                      setSetupFenError('');
+                    }}
+                    className="px-4 py-2 border border-zinc-400 text-zinc-100 text-lg hover:bg-zinc-700/30 transition"
+                  >
+                    Reset to Default
+                  </button>
+                  <button
+                    onClick={() => {
+                      const turn = (activeSetupFen.split(' ')[1] as PieceColor) || 'w';
+                      const cleared = `8/8/8/8/8/8/8/8 ${turn} - - 0 1`;
+                      updateActiveSetupFen(cleared);
+                      setSetupFenError('');
+                    }}
+                    className="px-4 py-2 border border-zinc-400 text-zinc-100 text-lg hover:bg-zinc-700/30 transition"
+                  >
+                    Clear Board
+                  </button>
+                </div>
+
+                <div className="mb-4">
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className="text-zinc-200 text-lg">FEN:</span>
+                    <input
+                      value={setupFenInput}
+                      onChange={(e) => {
+                        setSetupFenInput(e.target.value);
+                        setSetupFenError('');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key !== 'Enter') return;
+                        const normalized = setupFenInput.trim();
+                        if (!normalized) return;
+                        try {
+                          new Chess(normalized);
+                          updateActiveSetupFen(normalized);
+                          setSetupFenInput('');
+                          setSetupFenError('');
+                        } catch {
+                          setSetupFenError('Invalid FEN format');
+                        }
+                      }}
+                      className="flex-1 bg-transparent border border-zinc-500 text-zinc-100 px-3 py-2 text-sm rounded-md focus:outline-none focus:border-yellow-500"
+                      placeholder="Paste FEN and press Enter"
+                    />
+                  </div>
+                  {setupFenError && <div className="text-red-400 text-sm">{setupFenError}</div>}
+                </div>
+
+                <div className="flex-1 min-h-0 mb-4">
+                  {state.isAnalysisMode && !isBothSidesAI ? (
+                    <SetupAnalysisPanel />
+                  ) : (
+                    <div className="h-full rounded-lg border border-zinc-700 bg-[#2a2a2a]/60" />
+                  )}
+                </div>
+
+                <div className="mt-auto space-y-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-6">
+                    <label className="flex items-center gap-2 text-zinc-100 text-base whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={(activeSetupFen.split(' ')[1] || 'w') === 'w'}
+                        onChange={(e) => {
+                          if (!e.target.checked) return;
+                          const nextFen = setFenTurn(activeSetupFen, 'w');
+                          updateActiveSetupFen(nextFen);
+                          setSetupFenError('');
+                        }}
+                        className="w-5 h-5"
+                      />
+                      White to Move
+                    </label>
+                    <label className="flex items-center gap-2 text-zinc-100 text-base whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={(activeSetupFen.split(' ')[1] || 'w') === 'b'}
+                        onChange={(e) => {
+                          if (!e.target.checked) return;
+                          const nextFen = setFenTurn(activeSetupFen, 'b');
+                          updateActiveSetupFen(nextFen);
+                          setSetupFenError('');
+                        }}
+                        className="w-5 h-5"
+                      />
+                      Black to Move
+                    </label>
+                    <button
+                      onClick={toggleAnalysisMode}
+                      className={`px-5 py-2 rounded-lg border transition whitespace-nowrap text-base ${
+                        isHydrated && state.isAnalysisMode
+                          ? 'border-yellow-500 text-yellow-500 hover:border-yellow-400 hover:text-yellow-400'
+                          : 'border-gray-600 text-gray-300 hover:text-white hover:border-gray-400'
+                      }`}
+                      title={state.isAnalysisMode ? 'Close Analysis' : 'Open Analysis'}
+                    >
+                      {state.isAnalysisMode ? 'Close Analysis' : 'Open Analysis'}
+                    </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3">
+                      <button
+                        onClick={() => dispatch({ type: 'SET_CUSTOMIZING', enabled: false })}
+                        className="px-6 py-2.5 border border-zinc-400 text-zinc-100 text-lg rounded-md hover:bg-zinc-700/30 transition"
+                      >
+                        Exit
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          try {
+                            new Chess(activeSetupFen);
+                          } catch {
+                            setSetupFenError('Current board is invalid. Please fix FEN before confirming.');
+                            return;
+                          }
+                          setFen(activeSetupFen);
+                          dispatch({ type: 'SET_CUSTOMIZING', enabled: false });
+                        }}
+                        className="px-6 py-2.5 bg-yellow-500 text-black font-semibold text-lg rounded-md hover:bg-yellow-400 transition"
+                      >
+                        Confirm & Select
+                      </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
