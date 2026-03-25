@@ -913,9 +913,13 @@ export default function GamingView() {
           <div className="flex items-center gap-3 pt-4">
             <button
               onClick={handleBackToSetup}
-              className="flex-1 py-2 rounded-lg border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 transition whitespace-nowrap"
+              className={`flex-1 py-2 rounded-lg transition whitespace-nowrap ${
+                state.gameResult
+                  ? 'bg-yellow-500 text-black font-semibold hover:bg-yellow-400'
+                  : 'border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400'
+              }`}
             >
-              New Game
+              {state.gameResult ? 'New Game' : 'Quit Game'}
             </button>
             <button
               onClick={toggleAnalysisMode}
