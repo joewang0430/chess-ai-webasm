@@ -178,9 +178,16 @@ function AnalysisPanel() {
   const { state } = useGame();
   const analysis = state.analysis;
 
-  // AI 思考时不显示过时的分析结果
-  if (!state.isAnalysisMode || !analysis || state.isAIThinking) {
+  if (!state.isAnalysisMode) {
     return null;
+  }
+
+  if (!analysis || state.isAIThinking) {
+    return (
+      <div className="bg-[#2a2a2a] rounded-lg p-4 min-h-[214px] flex items-center justify-center">
+        <div className="h-6 w-6 rounded-full border-2 border-zinc-600 border-t-zinc-400 animate-spin" />
+      </div>
+    );
   }
 
   // 固定行数，避免深度切换时因行数变化导致容器高度抖动
@@ -515,6 +522,7 @@ export default function GamingView() {
   // 是否处于历史预览模式
   const isPreviewMode = state.viewingMoveIndex !== null;
   const canToggleAnalysis = canAnalyze || !!state.gameResult;
+  const bothSidesAI = state.white.type === 'stockfish' && state.black.type === 'stockfish';
 
   // 当前展示在棋盘上的局面（历史预览时使用对应走法后的 FEN）
   const displayedFen = useMemo(() => {
@@ -800,7 +808,7 @@ export default function GamingView() {
             {/* Bar 区域：始终占 24px，保持右侧面板位置稳定 */}
             <div className="w-6 flex-shrink-0">
               {/* EvalBar: 仅在分析模式下显示 */}
-              {state.isAnalysisMode && (
+              {state.isAnalysisMode && !bothSidesAI && (
                 <EvalBar 
                   score={(() => {
                     // 获取原始评分（当前走棋方视角）
@@ -830,7 +838,7 @@ export default function GamingView() {
 
             {/* 中间：分析面板 */}
             <div className="my-3">
-              <AnalysisPanel />
+              {!bothSidesAI && <AnalysisPanel />}
             </div>
 
             {/* 底部：另一方 */}

@@ -290,8 +290,16 @@ function SetupAnalysisPanel() {
   const { state } = useGame();
   const analysis = state.analysis;
 
-  if (!state.isAnalysisMode || !analysis || state.isAIThinking) {
+  if (!state.isAnalysisMode) {
     return null;
+  }
+
+  if (!analysis || state.isAIThinking) {
+    return (
+      <div className="bg-[#2a2a2a] rounded-lg p-4 min-h-[214px] flex items-center justify-center">
+        <div className="h-6 w-6 rounded-full border-2 border-zinc-600 border-t-zinc-400 animate-spin" />
+      </div>
+    );
   }
 
   const rows = Array.from({ length: ANALYSIS_MULTI_PV }, (_, i) => analysis.topMoves[i]);
