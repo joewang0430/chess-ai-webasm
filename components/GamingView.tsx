@@ -515,6 +515,19 @@ export default function GamingView() {
   // 是否处于历史预览模式
   const isPreviewMode = state.viewingMoveIndex !== null;
 
+  // 当前展示在棋盘上的局面（历史预览时使用对应走法后的 FEN）
+  const displayedFen = useMemo(() => {
+    if (state.viewingMoveIndex === null) return state.fen;
+    const move = state.moveHistory[state.viewingMoveIndex];
+    return move ? move.fenAfter : state.fen;
+  }, [state.fen, state.moveHistory, state.viewingMoveIndex]);
+
+  // 当前展示局面的走棋方（用于分析视角与 EvalBar 方向）
+  const displayedTurn = useMemo(
+    () => displayedFen.split(' ')[1] as PieceColor,
+    [displayedFen]
+  );
+
   // 获取当前 AI 的深度配置
   const currentAIDepth = state.turn === 'w' 
     ? state.white.aiConfig.depth 
@@ -547,6 +560,7 @@ export default function GamingView() {
   
   // 缓存已完成的分析结果 (方案2: 只缓存深度25完成的结果)
   const analysisCacheRef = useRef<{ fen: string; data: typeof analysisData } | null>(null);
+  const currentAnalysisFenRef = useRef<string>(displayedFen);
 
   // ============================================
   // 同步分析数据到全局状态 & 缓存已完成结果
@@ -556,10 +570,10 @@ export default function GamingView() {
       setAnalysisData(analysisData);
       // 分析完成时缓存结果
       if (!analysisData.isAnalyzing) {
-        analysisCacheRef.current = { fen: state.fen, data: analysisData };
+        analysisCacheRef.current = { fen: currentAnalysisFenRef.current, data: analysisData };
       }
     }
-  }, [analysisData, state.isAnalysisMode, setAnalysisData, state.fen]);
+  }, [analysisData, state.isAnalysisMode, setAnalysisData]);
 
   // 在走棋方切换时，立即停止旧的分析并清空数据，避免滞后显示
   // 同时清除缓存（因为FEN已变化）
@@ -572,7 +586,7 @@ export default function GamingView() {
       // 分析模式下不涉及对弈，确保不被 AI 思考标记隐藏面板
       setAIThinking(false);
     }
-  }, [state.turn]);
+  }, [displayedFen, state.isAnalysisMode, stopSearch, setAnalysisData, setAIThinking]);
 
   // ============================================
   // AI 走棋逻辑
@@ -652,13 +666,15 @@ export default function GamingView() {
   // 分析模式触发
   // ============================================
   useEffect(() => {
-    if (state.isAnalysisMode && !isCurrentPlayerAI && isReady) {
+    if (state.isAnalysisMode && isReady) {
+      const targetFen = displayedFen;
+
       // 进入分析模式时清理 AI 思考标记，避免面板因 isAIThinking 被隐藏
       setAIThinking(false);
       
       // 检查缓存：如果有匹配当前FEN的已完成分析，直接使用
       const cache = analysisCacheRef.current;
-      if (cache && cache.fen === state.fen && cache.data && !cache.data.isAnalyzing) {
+      if (cache && cache.fen === targetFen && cache.data && !cache.data.isAnalyzing) {
         setAnalysisData(cache.data);
         setAnalysisMode(true);
         return;
@@ -669,7 +685,8 @@ export default function GamingView() {
       setAnalysisData(null);
       setDepth(ANALYSIS_DEPTH);
       setAnalysisMode(true);
-      evaluatePosition(state.fen);
+      currentAnalysisFenRef.current = targetFen;
+      evaluatePosition(targetFen);
     } else {
       // 非分析模式：不要中断 AI 的搜索，仅清理分析 UI 状态
       if (!isCurrentPlayerAI) {
@@ -680,7 +697,7 @@ export default function GamingView() {
       setAnalysisMode(false);
       setAnalysisData(null);
     }
-  }, [state.isAnalysisMode, state.fen, isCurrentPlayerAI, isReady]);
+  }, [state.isAnalysisMode, displayedFen, isCurrentPlayerAI, isReady, setAIThinking, setAnalysisData, setDepth, setAnalysisMode, evaluatePosition, stopSearch]);
 
   // ============================================
   // 计时器逻辑
@@ -791,7 +808,7 @@ export default function GamingView() {
                       : state.analysis?.topMoves[0]?.score;
                     if (rawScore === undefined) return undefined;
                     // 统一转换为白方视角
-                    return state.turn === 'w' ? rawScore : -rawScore;
+                    return displayedTurn === 'w' ? rawScore : -rawScore;
                   })()} 
                   isFlipped={state.settings.boardFlipped} 
                 />
