@@ -472,7 +472,7 @@ export default function SetupView() {
           <div className="flex items-center gap-3 pt-4">
             <button
               onClick={startGame}
-              className="flex-1 py-2 bg-yellow-500 text-black font-semibold rounded-lg hover:bg-yellow-400 transition whitespace-nowrap"
+              className="flex-1 py-2 bg-yellow-500 text-black font-semibold rounded-lg hover:bg-yellow-400 hover:-translate-y-0.5 transform-gpu transition whitespace-nowrap"
             >
               Start Game
             </button>

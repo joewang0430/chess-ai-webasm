@@ -933,7 +933,7 @@ export default function GamingView() {
               onClick={handleBackToSetup}
               className={`flex-1 py-2 rounded-lg transition whitespace-nowrap ${
                 state.gameResult
-                  ? 'bg-yellow-500 text-black font-semibold hover:bg-yellow-400'
+                  ? 'bg-yellow-500 text-black font-semibold hover:bg-yellow-400 hover:-translate-y-0.5 transform-gpu'
                   : 'border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400'
               }`}
             >
