@@ -175,11 +175,11 @@ function PlayerPanel({ color, label, isCurrentTurn }: PlayerPanelProps) {
 // 分析面板
 // ============================================
 function AnalysisPanel() {
-  const { state, isCurrentPlayerAI } = useGame();
+  const { state } = useGame();
   const analysis = state.analysis;
 
   // AI 思考时不显示过时的分析结果
-  if (!state.isAnalysisMode || !analysis || isCurrentPlayerAI || state.isAIThinking) {
+  if (!state.isAnalysisMode || !analysis || state.isAIThinking) {
     return null;
   }
 
@@ -514,6 +514,7 @@ export default function GamingView() {
 
   // 是否处于历史预览模式
   const isPreviewMode = state.viewingMoveIndex !== null;
+  const canToggleAnalysis = canAnalyze || !!state.gameResult;
 
   // 当前展示在棋盘上的局面（历史预览时使用对应走法后的 FEN）
   const displayedFen = useMemo(() => {
@@ -940,15 +941,15 @@ export default function GamingView() {
             </button>
             <button
               onClick={toggleAnalysisMode}
-              disabled={!canAnalyze && !state.isAnalysisMode}
+              disabled={!canToggleAnalysis && !state.isAnalysisMode}
               className={`flex-1 py-2 rounded-lg border transition whitespace-nowrap ${
                 isHydrated && state.isAnalysisMode
                   ? 'border-yellow-500 text-yellow-500 hover:border-yellow-400 hover:text-yellow-400'
-                  : canAnalyze
+                  : canToggleAnalysis
                     ? 'border-gray-600 text-gray-300 hover:text-white hover:border-gray-400'
                     : 'border-gray-700 text-gray-600 cursor-not-allowed'
               }`}
-              title={!canAnalyze && !state.isAnalysisMode ? "Need a Player's turn to analyze" : ""}
+              title={!canToggleAnalysis && !state.isAnalysisMode ? "Analysis is unavailable right now" : ""}
             >
               {state.isAnalysisMode ? 'Close Analysis' : 'Open Analysis'}
             </button>
