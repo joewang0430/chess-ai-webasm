@@ -852,18 +852,18 @@ export default function GamingView() {
 
           {/* 中列: 棋盘操作按钮 - 固定 500px 只和棋盘对齐 */}
           <div className="pt-4">
-            <div className="w-[500px] flex items-center justify-between">
-              {/* Back to Now - 始终显示，非预览模式下 disabled */}
+            <div className="w-[500px] flex items-center gap-3">
+              {/* Back to Latest - 始终显示，非预览模式下 disabled */}
               <button
                 onClick={() => setViewingMoveIndex(null)}
                 disabled={!isPreviewMode}
-                className={`flex-1 px-2 py-2 rounded border transition whitespace-nowrap ${
+                className={`flex-1 px-2 py-2 rounded-lg border transition whitespace-nowrap ${
                   isPreviewMode
-                    ? 'border-gray-600 hover:border-gray-400'
+                    ? 'border-gray-600 text-gray-300 hover:text-white hover:border-gray-400'
                     : 'border-gray-700 text-gray-600 cursor-not-allowed'
                 }`}
               >
-                Back to Now
+                Back to Latest
               </button>
               
               {/* Undo / Play from Here - 互斥显示 */}
@@ -872,7 +872,7 @@ export default function GamingView() {
                   onClick={() => {
                     resetToMove(state.viewingMoveIndex!);
                   }}
-                  className="flex-1 mx-2 px-2 py-2 rounded border border-gray-600 hover:border-gray-400 transition whitespace-nowrap"
+                  className="flex-1 px-2 py-2 rounded-lg border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 transition whitespace-nowrap"
                 >
                   Play from Here
                 </button>
@@ -880,9 +880,9 @@ export default function GamingView() {
                 <button
                   onClick={undoMove}
                   disabled={!canUndo}
-                  className={`flex-1 mx-2 px-2 py-2 rounded border transition whitespace-nowrap ${
+                  className={`flex-1 px-2 py-2 rounded-lg border transition whitespace-nowrap ${
                     canUndo 
-                      ? 'border-gray-600 hover:border-gray-400' 
+                      ? 'border-gray-600 text-gray-300 hover:text-white hover:border-gray-400' 
                       : 'border-gray-700 text-gray-600 cursor-not-allowed'
                   }`}
                 >
@@ -892,17 +892,17 @@ export default function GamingView() {
               
               <button
                 onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { showLegalMoves: !state.settings.showLegalMoves } })}
-                className={`flex-1 px-2 py-2 rounded border transition whitespace-nowrap ${
+                className={`flex-1 px-2 py-2 rounded-lg border transition whitespace-nowrap ${
                   isHydrated && state.settings.showLegalMoves 
-                    ? 'border-yellow-500 text-yellow-500' 
-                    : 'border-gray-600 hover:border-gray-400'
+                    ? 'border-yellow-500 text-yellow-500 hover:border-yellow-400 hover:text-yellow-400' 
+                    : 'border-gray-600 text-gray-300 hover:text-white hover:border-gray-400'
                 }`}
               >
                 {state.settings.showLegalMoves ? 'Hide Legal' : 'Show Legal'}
               </button>
               <button
                 onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { boardFlipped: !state.settings.boardFlipped } })}
-                className="flex-1 ml-2 px-2 py-2 rounded border border-gray-600 hover:border-gray-400 transition whitespace-nowrap"
+                className="flex-1 px-2 py-2 rounded-lg border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 transition whitespace-nowrap"
               >
                 Flip
               </button>
@@ -910,21 +910,21 @@ export default function GamingView() {
           </div>
 
           {/* 右列: 游戏控制按钮 */}
-          <div className="flex items-center gap-2 pt-4">
+          <div className="flex items-center gap-3 pt-4">
             <button
               onClick={handleBackToSetup}
-              className="flex-1 py-2 rounded border border-gray-600 hover:border-gray-400 transition whitespace-nowrap"
+              className="flex-1 py-2 rounded-lg border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 transition whitespace-nowrap"
             >
               New Game
             </button>
             <button
               onClick={toggleAnalysisMode}
               disabled={!canAnalyze && !state.isAnalysisMode}
-              className={`flex-1 py-2 rounded border transition whitespace-nowrap ${
+              className={`flex-1 py-2 rounded-lg border transition whitespace-nowrap ${
                 isHydrated && state.isAnalysisMode
-                  ? 'border-yellow-500 text-yellow-500'
+                  ? 'border-yellow-500 text-yellow-500 hover:border-yellow-400 hover:text-yellow-400'
                   : canAnalyze
-                    ? 'border-gray-600 hover:border-gray-400'
+                    ? 'border-gray-600 text-gray-300 hover:text-white hover:border-gray-400'
                     : 'border-gray-700 text-gray-600 cursor-not-allowed'
               }`}
               title={!canAnalyze && !state.isAnalysisMode ? "Need a Player's turn to analyze" : ""}

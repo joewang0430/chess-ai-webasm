@@ -421,7 +421,7 @@ export default function SetupView() {
                 <button
                   key={theme}
                   onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { theme: theme as any } })}
-                  className={`w-6 h-6 rounded border-2 ${
+                  className={`w-6 h-6 rounded-md border-2 ${
                     state.settings.theme === theme ? 'border-white' : 'border-transparent'
                   }`}
                   style={{
@@ -438,30 +438,30 @@ export default function SetupView() {
 
           {/* 中列: 棋盘操作按钮 */}
           <div className="pt-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
               <button
                 onClick={toggleCustomizing}
-                className={`flex-1 px-2 py-2 rounded border transition whitespace-nowrap ${
+                className={`flex-1 px-2 py-2 rounded-lg border transition whitespace-nowrap ${
                   state.isCustomizing 
-                    ? 'border-yellow-500 text-yellow-500' 
-                    : 'border-gray-600 hover:border-gray-400'
+                    ? 'border-yellow-500 text-yellow-500 hover:border-yellow-400 hover:text-yellow-400' 
+                    : 'border-gray-600 text-gray-300 hover:text-white hover:border-gray-400'
                 }`}
               >
                 Setup Board
               </button>
               <button
                 onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { showLegalMoves: !state.settings.showLegalMoves } })}
-                className={`flex-1 mx-2 px-2 py-2 rounded border transition whitespace-nowrap ${
+                className={`flex-1 px-2 py-2 rounded-lg border transition whitespace-nowrap ${
                   isHydrated && state.settings.showLegalMoves 
-                    ? 'border-yellow-500 text-yellow-500' 
-                    : 'border-gray-600 hover:border-gray-400'
+                    ? 'border-yellow-500 text-yellow-500 hover:border-yellow-400 hover:text-yellow-400' 
+                    : 'border-gray-600 text-gray-300 hover:text-white hover:border-gray-400'
                 }`}
               >
                 {state.settings.showLegalMoves ? 'Hide Legal' : 'Show Legal'}
               </button>
               <button
                 onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { boardFlipped: !state.settings.boardFlipped } })}
-                className="flex-1 px-2 py-2 rounded border border-gray-600 hover:border-gray-400 transition whitespace-nowrap"
+                className="flex-1 px-2 py-2 rounded-lg border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 transition whitespace-nowrap"
               >
                 Flip
               </button>
@@ -469,19 +469,19 @@ export default function SetupView() {
           </div>
 
           {/* 右列: 开始游戏按钮 */}
-          <div className="flex items-center gap-2 pt-4">
+          <div className="flex items-center gap-3 pt-4">
             <button
               onClick={startGame}
-              className="flex-1 py-2 bg-yellow-500 text-black font-semibold rounded hover:bg-yellow-400 transition whitespace-nowrap"
+              className="flex-1 py-2 bg-yellow-500 text-black font-semibold rounded-lg hover:bg-yellow-400 transition whitespace-nowrap"
             >
               Start Game
             </button>
             <button
               onClick={toggleAnalysisMode}
-              className={`flex-1 py-2 rounded border transition whitespace-nowrap ${
+              className={`flex-1 py-2 rounded-lg border transition whitespace-nowrap ${
                 isHydrated && state.isAnalysisMode
-                  ? 'border-yellow-500 text-yellow-500'
-                  : 'border-gray-600 hover:border-gray-400'
+                  ? 'border-yellow-500 text-yellow-500 hover:border-yellow-400 hover:text-yellow-400'
+                  : 'border-gray-600 text-gray-300 hover:text-white hover:border-gray-400'
               }`}
               title={state.isAnalysisMode ? 'Close Analysis' : 'Open Analysis'}
             >

@@ -182,7 +182,7 @@ export const INITIAL_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -
 export const DEFAULT_TIME = 0;
 
 /** 默认 AI 深度 */
-export const DEFAULT_DEPTH = 15;
+export const DEFAULT_DEPTH = 20;
 
 /** 分析模式深度 */
 export const ANALYSIS_DEPTH = 25;

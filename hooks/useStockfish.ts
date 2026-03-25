@@ -6,7 +6,7 @@ import { AnalysisMove, AnalysisData, ANALYSIS_MULTI_PV } from '@/types/game';
 // ============================================
 
 interface StockfishOptions {
-  /** 搜索深度 (1-25, 默认 15) */
+  /** 搜索深度 (1-25, 默认 20) */
   depth?: number;
   /** 思考时间限制 ms (默认 0 不限制) */
   moveTime?: number;
@@ -115,7 +115,7 @@ function parseInfoLine(line: string): Partial<AnalysisMove> & { depth?: number; 
 // ============================================
 
 export function useStockfish({
-  depth = 15,
+  depth = 20,
   moveTime = 0,
   analysisMode = false,
   multiPV = ANALYSIS_MULTI_PV,
