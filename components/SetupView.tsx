@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
 import { useGame } from '@/context/GameContext';
-import { PieceColor, PlayerType, DEFAULT_TIME, MIN_DEPTH, MAX_DEPTH } from '@/types/game';
+import { PieceColor, PlayerType, DEFAULT_TIME, MIN_DEPTH, MAX_DEPTH, ANALYSIS_DEPTH, ANALYSIS_MULTI_PV } from '@/types/game';
+import { useStockfish } from '@/hooks/useStockfish';
 import ChessBoard from './ChessBoard';
 
 // ============================================
@@ -283,10 +284,152 @@ function CapturedPiecesPanel() {
 }
 
 // ============================================
+// Setup 分析面板
+// ============================================
+function SetupAnalysisPanel() {
+  const { state } = useGame();
+  const analysis = state.analysis;
+
+  if (!state.isAnalysisMode || !analysis || state.isAIThinking) {
+    return null;
+  }
+
+  const rows = Array.from({ length: ANALYSIS_MULTI_PV }, (_, i) => analysis.topMoves[i]);
+
+  return (
+    <div className="bg-[#2a2a2a] rounded-lg p-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <h3 className="text-gray-400">Analysis (Depth: {analysis.depth})</h3>
+        {analysis.isAnalyzing && (
+          <span className="text-yellow-500 text-sm animate-pulse">Analyzing...</span>
+        )}
+      </div>
+
+      <div className="space-y-1">
+        {rows.map((move, i) => (
+          <div key={i} className="flex items-center justify-between text-sm bg-[#3a3a3a] rounded px-2 py-1 min-h-[32px]">
+            <span className="font-mono">
+              {i + 1}. {move ? move.move : '…'}
+            </span>
+            <div className="flex items-center gap-3">
+              {move ? (
+                <span className={move.score >= 0 ? 'text-green-400' : 'text-red-400'}>
+                  {move.mate ? `M${move.mate}` : `${(move.score / 100).toFixed(2)}`}
+                </span>
+              ) : (
+                <span className="text-gray-500">—</span>
+              )}
+              <span className="text-gray-400">
+                {move ? `${move.winChance.toFixed(1)}%` : ''}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// Setup 评估条
+// ============================================
+function SetupEvalBar({ score, isFlipped }: { score?: number; isFlipped?: boolean }) {
+  const lastValidRef = useRef<{ whitePercent: number; score: number } | null>(null);
+  const isStalled = score === undefined;
+
+  let whitePercent: number;
+  let effectiveScore: number;
+
+  if (score !== undefined) {
+    const normalized = score / 100;
+    const sigmoid = 1 / (1 + Math.exp(-normalized * 0.5));
+    whitePercent = sigmoid * 100;
+    effectiveScore = score;
+    lastValidRef.current = { whitePercent, score };
+  } else if (lastValidRef.current !== null) {
+    whitePercent = lastValidRef.current.whitePercent;
+    effectiveScore = lastValidRef.current.score;
+  } else {
+    whitePercent = 50;
+    effectiveScore = 0;
+  }
+
+  const displayScore = useMemo(() => {
+    const pawns = Math.abs(effectiveScore) / 100;
+    return pawns >= 10 ? Math.round(pawns).toString() : pawns.toFixed(1);
+  }, [effectiveScore]);
+
+  const whiteAdvantage = effectiveScore >= 0;
+
+  return (
+    <div
+      className={`w-5 rounded-sm overflow-hidden flex ml-1 relative ${isFlipped ? 'flex-col-reverse' : 'flex-col'}`}
+      style={{ height: 500 }}
+    >
+      <div
+        className={`bg-zinc-700 transition-all duration-500 ease-out relative ${isStalled ? 'animate-pulse' : ''}`}
+        style={{ height: `${100 - whitePercent}%` }}
+      >
+        {displayScore && !whiteAdvantage && (
+          <span className={`absolute left-1/2 -translate-x-1/2 text-[10px] font-medium text-zinc-200 ${isFlipped ? 'bottom-1' : 'top-1'}`}>
+            {displayScore}
+          </span>
+        )}
+      </div>
+      <div
+        className={`bg-zinc-200 transition-all duration-500 ease-out relative ${isStalled ? 'animate-pulse' : ''}`}
+        style={{ height: `${whitePercent}%` }}
+      >
+        {displayScore && whiteAdvantage && (
+          <span className={`absolute left-1/2 -translate-x-1/2 text-[10px] font-medium text-zinc-700 ${isFlipped ? 'top-1' : 'bottom-1'}`}>
+            {displayScore}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
 // 主组件: SetupView
 // ============================================
 export default function SetupView() {
-  const { state, startGame, setFen, toggleCustomizing, canAnalyze, toggleAnalysisMode, dispatch, isHydrated } = useGame();
+  const { state, startGame, setFen, toggleCustomizing, toggleAnalysisMode, dispatch, isHydrated, setAnalysisData } = useGame();
+
+  const displayedTurn = useMemo(() => state.fen.split(' ')[1] as PieceColor, [state.fen]);
+
+  const {
+    analysisData,
+    isReady,
+    evaluatePosition,
+    stopSearch,
+    setDepth,
+    setAnalysisMode,
+  } = useStockfish({
+    depth: ANALYSIS_DEPTH,
+    analysisMode: state.isAnalysisMode,
+  });
+
+  useEffect(() => {
+    if (state.isAnalysisMode && analysisData) {
+      setAnalysisData(analysisData);
+    }
+  }, [analysisData, state.isAnalysisMode, setAnalysisData]);
+
+  useEffect(() => {
+    if (state.isAnalysisMode && isReady) {
+      const targetFen = state.fen;
+      stopSearch();
+      setAnalysisData(null);
+      setDepth(ANALYSIS_DEPTH);
+      setAnalysisMode(true);
+      evaluatePosition(targetFen);
+    } else {
+      stopSearch();
+      setAnalysisMode(false);
+      setAnalysisData(null);
+    }
+  }, [state.isAnalysisMode, state.fen, isReady, stopSearch, setAnalysisData, setDepth, setAnalysisMode, evaluatePosition]);
 
   // 时间选项 (分钟, 0 表示不计时)
   const timeOptions = [1, 3, 5, 10, 15, 30, 60, 120, 0];
@@ -328,7 +471,7 @@ export default function SetupView() {
         </h1>
 
         {/* 主布局 - 使用 Grid 确保上下列对齐 */}
-        <div className="grid grid-cols-[192px_500px_320px] gap-6">
+        <div className="grid grid-cols-[192px_524px_320px] gap-6">
           {/* ========== Row 1: 主要内容 ========== */}
           
           {/* 左列: 捕获棋子 + 走棋历史 */}
@@ -344,9 +487,21 @@ export default function SetupView() {
             </div>
           </div>
 
-          {/* 中列: 棋盘 */}
-          <div>
+          {/* 中列: 棋盘 + EvalBar 空间（与 Gaming 一致） */}
+          <div className="flex">
             <ChessBoard />
+            <div className="w-6 flex-shrink-0">
+              {state.isAnalysisMode && (
+                <SetupEvalBar
+                  score={(() => {
+                    const rawScore = state.analysis?.topMoves[0]?.score;
+                    if (rawScore === undefined) return undefined;
+                    return displayedTurn === 'w' ? rawScore : -rawScore;
+                  })()}
+                  isFlipped={state.settings.boardFlipped}
+                />
+              )}
+            </div>
           </div>
 
           {/* 右列: 配置面板（与棋盘上下齐平） */}
@@ -356,53 +511,57 @@ export default function SetupView() {
               <PlayerPanel color={topColor} label={topColor === 'b' ? 'Black' : 'White'} />
             </div>
 
-            {/* 中间：时间设置 */}
+            {/* 中间：分析面板 / 时间设置（Analysis 开启时用分析替换时间设置） */}
             <div className="my-3">
-              <div className="bg-[#2a2a2a] rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-400">Time Limit:</span>
-                  <select
-                    value={getCurrentTimeValue()}
-                    onChange={(e) => handleTimeChange(parseInt(e.target.value))}
-                    className="bg-[#3a3a3a] text-white px-3 py-1.5 rounded border border-gray-600 focus:outline-none focus:border-yellow-500"
-                  >
-                    {timeOptions.map((t) => (
-                      <option key={t} value={t}>{t === 0 ? 'No Limit' : `${t}:00`}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 自定义棋盘时的先手选择 */}
-                {state.isCustomizing && (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-400">Board is customized:</span>
-                      <select
-                        value={state.turn}
-                        onChange={(e) => {
-                          const newFen = state.fen.replace(
-                            / [wb] /,
-                            ` ${e.target.value} `
-                          );
-                          setFen(newFen);
-                        }}
-                        className="bg-[#3a3a3a] text-white px-3 py-1.5 rounded border border-gray-600 focus:outline-none focus:border-yellow-500"
-                      >
-                        <option value="w">White</option>
-                        <option value="b">Black</option>
-                      </select>
-                      <span className="text-gray-400">plays first.</span>
-                    </div>
-
-                    <button
-                      onClick={handleResetBoard}
-                      className="text-gray-400 underline hover:text-white transition"
+              {state.isAnalysisMode ? (
+                <SetupAnalysisPanel />
+              ) : (
+                <div className="bg-[#2a2a2a] rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400">Time Limit:</span>
+                    <select
+                      value={getCurrentTimeValue()}
+                      onChange={(e) => handleTimeChange(parseInt(e.target.value))}
+                      className="bg-[#3a3a3a] text-white px-3 py-1.5 rounded border border-gray-600 focus:outline-none focus:border-yellow-500"
                     >
-                      Reset to classic board
-                    </button>
-                  </>
-                )}
-              </div>
+                      {timeOptions.map((t) => (
+                        <option key={t} value={t}>{t === 0 ? 'No Limit' : `${t}:00`}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 自定义棋盘时的先手选择 */}
+                  {state.isCustomizing && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-400">Board is customized:</span>
+                        <select
+                          value={state.turn}
+                          onChange={(e) => {
+                            const newFen = state.fen.replace(
+                              / [wb] /,
+                              ` ${e.target.value} `
+                            );
+                            setFen(newFen);
+                          }}
+                          className="bg-[#3a3a3a] text-white px-3 py-1.5 rounded border border-gray-600 focus:outline-none focus:border-yellow-500"
+                        >
+                          <option value="w">White</option>
+                          <option value="b">Black</option>
+                        </select>
+                        <span className="text-gray-400">plays first.</span>
+                      </div>
+
+                      <button
+                        onClick={handleResetBoard}
+                        className="text-gray-400 underline hover:text-white transition"
+                      >
+                        Reset to classic board
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* 底部 */}
